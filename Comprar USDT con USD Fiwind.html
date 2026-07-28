@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora USDT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --border: #232733;
+    --accent: #00e5a0;
+    --accent-dim: rgba(0, 229, 160, 0.10);
+    --warn: #f5a623;
+    --warn-dim: rgba(245, 166, 35, 0.10);
+    --red: #ff5c5c;
+    --red-dim: rgba(255, 92, 92, 0.10);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .app-header { padding: 8px 4px 4px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .ticker {
+    display: inline-block;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .section-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+  .chevron { font-size: 10px; color: var(--muted); transition: transform 0.2s; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .section-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  label {
+    font-size: 11px; font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .input-wrap { position: relative; }
+  .prefix {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    pointer-events: none;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    padding: 11px 12px 11px 34px;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { border-color: var(--accent); }
+
+  .result-big {
+    border-radius: 11px;
+    padding: 16px 18px;
+  }
+  .result-big.green { background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.2); }
+  .result-big.orange { background: var(--warn-dim); border: 1px solid rgba(245,166,35,0.2); }
+  .result-big.red { background: var(--red-dim); border: 1px solid rgba(255,92,92,0.2); }
+
+  .result-label {
+    font-size: 10px; font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 5px;
+  }
+  .result-value {
+    font-family: var(--mono);
+    font-size: 24px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .green .result-value { color: var(--accent); }
+  .orange .result-value { color: var(--warn); }
+  .red .result-value { color: var(--red); }
+
+  .result-sub {
+    font-size: 11px; color: var(--muted);
+    margin-top: 3px; font-family: var(--mono);
+  }
+
+  /* Highlighted price blocks */
+  .price-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .price-block {
+    border-radius: 11px;
+    padding: 14px 16px;
+    border: 1px solid;
+  }
+  .price-block.buy {
+    background: rgba(0,229,160,0.07);
+    border-color: rgba(0,229,160,0.25);
+  }
+  .price-block.sell {
+    background: rgba(245,166,35,0.07);
+    border-color: rgba(245,166,35,0.25);
+  }
+  .price-block-label {
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .buy .price-block-label { color: var(--accent); }
+  .sell .price-block-label { color: var(--warn); }
+  .price-block-value {
+    font-family: var(--mono);
+    font-size: 16px; font-weight: 700;
+    color: var(--text);
+  }
+  .price-block-sub {
+    font-size: 10px; color: var(--muted);
+    margin-top: 3px; font-family: var(--mono);
+  }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .mini {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px 13px;
+  }
+  .mini-label {
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .mini-value {
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 700;
+    color: var(--text);
+  }
+
+  .divider {
+    height: 1px; background: var(--border);
+    margin: 2px 0;
+  }
+
+  .hint {
+    font-size: 11px; color: var(--muted);
+    font-family: var(--mono);
+    text-align: center; padding: 4px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="app-header">
+    <div class="eyebrow">Herramienta de trading</div>
+    <h1>Calc USDT <span class="ticker">ARS</span></h1>
+  </div>
+
+  <!-- SECCIÓN 1: Parámetros -->
+  <div class="section">
+    <div class="section-header" onclick="toggle('s1','c1')">
+      <div class="section-num">1</div>
+      <div class="section-title">Parámetros del mercado</div>
+      <div class="chevron open" id="c1">▼</div>
+    </div>
+    <div class="section-body" id="s1">
+      <div class="field">
+        <label>Precio USD en ARS</label>
+        <div class="input-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="usdPrice" placeholder="1495" value="1495" oninput="calc()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Cotización USDT (en USD)</label>
+        <div class="input-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="usdtRate" placeholder="1.048" value="1.048" step="0.001" oninput="calc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: Precio objetivo -->
+  <div class="section">
+    <div class="section-header" onclick="toggle('s2','c2')">
+      <div class="section-num">2</div>
+      <div class="section-title">Precio de compra implícito</div>
+      <div class="chevron open" id="c2">▼</div>
+    </div>
+    <div class="section-body" id="s2">
+      <div class="result-big orange">
+        <div class="result-label">Costo real del USDT en ARS</div>
+        <div class="result-value" id="costUsdt">—</div>
+        <div class="result-sub">USD × cotización USDT</div>
+      </div>
+      <div class="result-big green">
+        <div class="result-label">Punto de equilibrio (venta mín.)</div>
+        <div class="result-value" id="breakeven">—</div>
+        <div class="result-sub">Por debajo de esto perdés</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 3: Mi operación -->
+  <div class="section">
+    <div class="section-header" onclick="toggle('s3','c3')">
+      <div class="section-num">3</div>
+      <div class="section-title">Mi operación real</div>
+      <div class="chevron open" id="c3">▼</div>
+    </div>
+    <div class="section-body" id="s3">
+      <div class="field">
+        <label>Mi precio de venta USDT (ARS)</label>
+        <div class="input-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="myPrice" placeholder="1572" oninput="calc()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Capital en ARS</label>
+        <div class="input-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="capitalArs" placeholder="150000" oninput="calc()">
+        </div>
+      </div>
+
+      <div id="myResultBlock" style="display:none; flex-direction:column; gap:12px;">
+
+        <!-- Precios destacados compra vs venta -->
+        <div class="price-compare">
+          <div class="price-block buy">
+            <div class="price-block-label">Compraste a</div>
+            <div class="price-block-value" id="buyPrice">—</div>
+            <div class="price-block-sub">ARS / USDT</div>
+          </div>
+          <div class="price-block sell">
+            <div class="price-block-label">Vendiste a</div>
+            <div class="price-block-value" id="sellPrice">—</div>
+            <div class="price-block-sub">ARS / USDT</div>
+          </div>
+        </div>
+
+        <!-- Ganancia por USDT -->
+        <div class="result-big" id="myResultColor">
+          <div class="result-label" id="myResultLabel">Ganancia por USDT</div>
+          <div class="result-value" id="myGainPct">—</div>
+          <div class="result-sub" id="myGainArs">—</div>
+        </div>
+
+        <!-- Detalle con capital -->
+        <div id="capitalResultBlock" style="display:none; flex-direction:column; gap:8px;">
+          <div class="divider"></div>
+          <div class="grid2">
+            <div class="mini">
+              <div class="mini-label">USDT vendidos</div>
+              <div class="mini-value" id="usdtSold">—</div>
+            </div>
+            <div class="mini">
+              <div class="mini-label">USD comprados</div>
+              <div class="mini-value" id="totalUsd">—</div>
+            </div>
+            <div class="mini">
+              <div class="mini-label">USDT comprados</div>
+              <div class="mini-value" id="totalUsdt">—</div>
+            </div>
+            <div class="mini">
+              <div class="mini-label">ARS recuperados</div>
+              <div class="mini-value" id="totalReturn">—</div>
+            </div>
+          </div>
+          <div class="result-big" id="usdtGainBlock">
+            <div class="result-label">Ganancia neta en USDT</div>
+            <div class="result-value" id="usdtGain">—</div>
+            <div class="result-sub" id="usdtGainSub">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint" id="myHint">Ingresá tu precio de venta para ver resultados</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function fmt(n) {
+  return '$ ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtNum(n) {
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toggle(sectionId, chevronId) {
+  const body = document.getElementById(sectionId);
+  const chev = document.getElementById(chevronId);
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'flex';
+  chev.classList.toggle('open', !isOpen);
+}
+
+function calc() {
+  const usd = parseFloat(document.getElementById('usdPrice').value);
+  const rate = parseFloat(document.getElementById('usdtRate').value);
+
+  if (isNaN(usd) || isNaN(rate)) return;
+
+  const cost = usd * rate; // precio implícito de compra USDT en ARS
+
+  document.getElementById('costUsdt').textContent = fmt(cost);
+  document.getElementById('breakeven').textContent = fmt(cost);
+
+  const myPrice = parseFloat(document.getElementById('myPrice').value);
+  const capitalArs = parseFloat(document.getElementById('capitalArs').value);
+  const block = document.getElementById('myResultBlock');
+  const hint = document.getElementById('myHint');
+
+  if (!isNaN(myPrice) && myPrice > 0) {
+    block.style.display = 'flex';
+    hint.style.display = 'none';
+
+    // Precios destacados
+    document.getElementById('buyPrice').textContent = fmt(cost);
+    document.getElementById('sellPrice').textContent = fmt(myPrice);
+
+    const myGainArs = myPrice - cost;
+    const myGainPct = (myGainArs / cost) * 100;
+    const isWin = myGainArs >= 0;
+
+    const colorBlock = document.getElementById('myResultColor');
+    colorBlock.className = 'result-big ' + (isWin ? 'green' : 'red');
+    document.getElementById('myResultLabel').textContent = isWin ? 'Ganancia por USDT' : 'Pérdida por USDT';
+    document.getElementById('myGainPct').textContent = (isWin ? '+' : '') + myGainPct.toFixed(3) + '%';
+    document.getElementById('myGainArs').textContent = (isWin ? '+' : '') + fmt(myGainArs) + ' ARS por USDT';
+
+    const capBlock = document.getElementById('capitalResultBlock');
+    if (!isNaN(capitalArs) && capitalArs > 0) {
+      capBlock.style.display = 'flex';
+
+      const usdtSold  = capitalArs / myPrice;   // USDT que vendiste para conseguir los ARS
+      const usdBought = capitalArs / usd;        // USD comprados con esos ARS
+      const usdtBought = capitalArs / cost;      // USDT comprados con esos USD
+      const totalReturn = usdtBought * myPrice;  // ARS recuperados al vender
+      const usdtGain = usdtBought - usdtSold;
+      const usdtGainPct = (usdtGain / usdtSold) * 100;
+      const isUsdtWin = usdtGain >= 0;
+
+      document.getElementById('usdtSold').textContent   = fmtNum(usdtSold) + ' USDT';
+      document.getElementById('totalUsd').textContent   = 'U$D ' + fmtNum(usdBought);
+      document.getElementById('totalUsdt').textContent  = fmtNum(usdtBought) + ' USDT';
+      document.getElementById('totalReturn').textContent = fmt(totalReturn);
+
+      document.getElementById('usdtGain').textContent = (isUsdtWin ? '+' : '') + fmtNum(usdtGain) + ' USDT';
+      document.getElementById('usdtGainSub').textContent =
+        (isUsdtWin ? '+' : '') + usdtGainPct.toFixed(3) +
+        '% · ' + fmtNum(usdtSold) + ' vendidos → ' + fmtNum(usdtBought) + ' comprados';
+      document.getElementById('usdtGainBlock').className = 'result-big ' + (isUsdtWin ? 'green' : 'red');
+
+    } else {
+      capBlock.style.display = 'none';
+    }
+  } else {
+    block.style.display = 'none';
+    hint.style.display = 'block';
+  }
+}
+
+calc();
+</script>
+</body>
+</html>
