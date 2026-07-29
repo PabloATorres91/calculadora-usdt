@@ -1,7 +1,7 @@
 // ================================================================
 // 1. SISTEMA DE PESTAÑAS Y CARGA DE ARCHIVOS (CON EVENTOS)
 // ================================================================
-function cargarPagina(rutaHtml) {
+async function cargarPagina(rutaHtml) {
     const contenedor = document.getElementById('contenedor-dinamico');
     
     // 1. Poner el texto de "Cargando..." mientras se descarga
@@ -32,10 +32,18 @@ function cargarPagina(rutaHtml) {
                 agregarEventosAInputs(inputsSpread, window.calcularSpread);
                 setTimeout(window.calcularSpread, 100);
             } else if (rutaHtml.includes('fiwind.html') && typeof window.calcularFiwind === 'function') {
-                // ASIGNAR EVENTOS DE FIWIND ANTES DE CALCULAR
+                // 1. ASIGNAR EVENTOS A LOS INPUTS DE FIWIND
                 const inputsFiwind = ['usdPrice', 'usdtRate', 'myPrice', 'capitalArs'];
                 agregarEventosAInputs(inputsFiwind, window.calcularFiwind);
-                setTimeout(window.calcularFiwind, 100);
+                
+                // 2. LLAMAMOS A LA API PARA TRAER PRECIOS AL ABRIR LA PESTAÑA
+                // El await funciona ahora porque la función es 'async'
+                (async () => {
+                    await window.actualizarPreciosFiwind();
+                    // 3. CALCULAMOS LA PESTAÑA CON LOS NUEVOS VALORES (después de que llegue la API)
+                    setTimeout(window.calcularFiwind, 100);
+                })();
+
             } else if (rutaHtml.includes('kraken.html') && typeof window.calcularCiclo === 'function') {
                 // ASIGNAR EVENTOS DE KRAKEN ANTES DE CALCULAR
                 const inputsKraken = ['c3_usdtVendido', 'c3_arsRecibidos', 'c3_tasaCompraUsd', 'c3_tasaFiwind', 'c3_tasaUsdtUsdc', 'c3_tasaKraken'];
@@ -146,6 +154,9 @@ window.calcularSpread = function() {
 window.calcularFiwind = function() {
     const usdPrice = document.getElementById('usdPrice');
     if(!usdPrice) return;
+
+    // 👇 ESTA LÍNEA EVITA QUE SE ROMPA SI TARDAN EN LLEGAR LOS DATOS
+    if(!document.getElementById('costUsdt')) return; 
     
     const usd = parseFloat(usdPrice.value);
     const rate = parseFloat(document.getElementById('usdtRate').value);
@@ -198,6 +209,49 @@ window.calcularFiwind = function() {
     } else {
         document.getElementById('myResultBlock').style.display = 'none';
         document.getElementById('myHint').style.display = 'block';
+    }
+}
+
+// -------------------------------------------------------------
+// NUEVA FUNCIÓN: CONSULTA DE PRECIOS EN VIVO (CRIPTOYA)
+// -------------------------------------------------------------
+window.actualizarPreciosFiwind = async function() {
+    const usdPriceInput = document.getElementById('usdPrice');
+    const usdtRateInput = document.getElementById('usdtRate');
+
+    if (!usdPriceInput || !usdtRateInput) return;
+
+    const oldRate = usdtRateInput.value;
+    usdtRateInput.placeholder = "Cargando...";
+
+    try {
+        // AHORA VAMOS DIRECTAMENTE A CRIPTOYA SIN PROXY (Gracias a la extensión CORS Unblock)
+        const response = await fetch('https://criptoya.com/api/fiwind/usdt/usd/1');
+        
+        if (!response.ok) throw new Error("Error al conectar con Criptoya");
+
+        const data = await response.json();
+        
+        const precioUSDT = data.ask; 
+
+        if (precioUSDT && !isNaN(precioUSDT) && precioUSDT > 0) {
+            usdtRateInput.value = precioUSDT.toFixed(3);
+        } else {
+            usdtRateInput.value = oldRate || "1.046"; 
+        }
+
+        if (!usdPriceInput.value || usdPriceInput.value === "" || usdPriceInput.value === "Cargando...") {
+            usdPriceInput.value = "1495";
+        }
+
+        window.calcularFiwind();
+
+    } catch (error) {
+        console.error("Error al obtener precio de Fiwind desde Criptoya:", error);
+        usdtRateInput.value = oldRate || "1.046";
+        window.calcularFiwind();
+    } finally {
+        usdtRateInput.placeholder = "Ej: 1.048";
     }
 }
 
