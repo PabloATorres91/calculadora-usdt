@@ -203,6 +203,24 @@ window.calcularFiwind = function() {
             document.getElementById('usdtGain').textContent = (isUsdtWin ? '+' : '') + usdtGainVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
             document.getElementById('usdtGainSub').textContent = (isUsdtWin ? '+' : '') + usdtGainPctVal.toFixed(3) + '% · ' + usdtSoldVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' vendidos → ' + usdtBoughtVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' comprados';
             document.getElementById('usdtGainBlock').className = 'result-big ' + (isUsdtWin ? 'green' : 'red');
+            // =========================================================
+            // 👇 NUEVO CÁLCULO DE GANANCIA EN ARS 👇
+            // =========================================================
+            const arsGainVal = totalReturnVal - capital;
+            const arsGainPctVal = (arsGainVal / capital) * 100;
+            const isArsWin = arsGainVal >= 0;
+
+            // Mostramos el bloque
+            document.getElementById('arsGainBlock').style.display = 'block';
+            
+            document.getElementById('arsGain').textContent = (isArsWin ? '+' : '') + '$ ' + arsGainVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            // 👇 CAMBIO AQUÍ: Agregamos el precio de venta al subtítulo
+            document.getElementById('arsGainSub').textContent = (isArsWin ? '+' : '') + arsGainPctVal.toFixed(3) + '% · Valorizado a tu venta: $' + myPriceVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ARS/USDT';
+            
+            // Le ponemos el color verde si ganó, rojo si perdió
+            document.getElementById('arsGainBlock').className = 'result-big ' + (isArsWin ? 'green' : 'red');
+
         } else {
             document.getElementById('capitalResultBlock').style.display = 'none';
         }

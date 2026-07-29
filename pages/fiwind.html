@@ -1,23 +1,129 @@
-<div class="section" style="border-left-color: #3b82f6;">
-    <h2>📊 Parámetros del mercado <span>referencia</span></h2>
-    <div class="input-row">
-        <div class="input-group">
-            <label>Precio USD en ARS <small>dólar referencia</small></label>
-            <div class="input-wrap">
-                <span class="prefix">$</span>
-                <input type="number" id="usdPrice" placeholder="1495" value="1495" step="any" />
-            </div>
-        </div>
-        <div class="input-group">
-            <label>Cotización USDT en USD <small>USDT/USD</small></label>
-            <div style="display: flex; gap: 10px; align-items: flex-end; width: 100%;">
-                <div class="input-wrap" style="flex: 1;">
+<div id="tab2" class="tab-content" style="display:block; min-height: 500px;">
+    
+    <!-- SECCIÓN 1: Parámetros del mercado -->
+    <div class="section" style="border-left-color: #3b82f6;">
+        <h2>📊 Parámetros del mercado <span>referencia</span></h2>
+        <div class="input-row">
+            <div class="input-group">
+                <label>Precio USD en ARS <small>dólar referencia</small></label>
+                <div class="input-wrap">
                     <span class="prefix">$</span>
-                    <input type="number" id="usdtRate" placeholder="1.048" value="1.048" step="0.001" />
+                    <input type="number" id="usdPrice" placeholder="1495" value="1495" step="any" />
                 </div>
-                <!-- EL NUEVO BOTÓN (AHORA CON onclick) -->
-                <button class="btn" onclick="window.actualizarPreciosFiwind()" style="padding: 10px 12px; font-size: 12px; white-space: nowrap;">🔄 Buscar cotización en vivo</button>
+            </div>
+            <div class="input-group">
+                <label>Cotización USDT en USD <small>USDT/USD</small></label>
+                <div style="display: flex; gap: 10px; align-items: flex-end; width: 100%;">
+                    <div class="input-wrap" style="flex: 1;">
+                        <span class="prefix">$</span>
+                        <input type="number" id="usdtRate" placeholder="1.048" value="1.048" step="0.001" />
+                    </div>
+                    <!-- EL BOTÓN DEFINITIVO -->
+                    <button class="btn" onclick="window.actualizarPreciosFiwind()" style="padding: 10px 12px; font-size: 12px; white-space: nowrap;">🔄 Buscar cotización en vivo</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- SECCIÓN 2: Precio de compra implícito -->
+    <div class="section" style="border-left-color: #f5a623;">
+        <h2>🎯 Precio de compra implícito</h2>
+        <div class="result-big orange">
+            <div class="result-label">Costo real del USDT en ARS</div>
+            <div class="result-value" id="costUsdt">—</div>
+            <div class="result-sub">USD × cotización USDT</div>
+        </div>
+        <div class="result-big green">
+            <div class="result-label">Punto de equilibrio (venta mín.)</div>
+            <div class="result-value" id="breakeven">—</div>
+            <div class="result-sub">Por debajo de esto perdés</div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 3: Mi operación real -->
+    <div class="section" style="border-left-color: #00c897;">
+        <h2>💼 Mi operación real</h2>
+        <div class="input-row">
+            <div class="input-group">
+                <label>Mi precio de venta USDT <small>ARS / USDT</small></label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="number" id="myPrice" placeholder="1572" step="any" />
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Capital en ARS <small>invertido</small></label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="number" id="capitalArs" placeholder="150000" step="any" value="150000" />
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE DE RESULTADOS DE MI OPERACIÓN -->
+        <div id="myResultBlock" style="display:none; flex-direction:column; gap:12px; margin-top:12px;">
+            
+            <!-- Comparativa de precios -->
+            <div class="price-compare">
+                <div class="price-block buy">
+                    <div class="price-block-label">Compraste a</div>
+                    <div class="price-block-value" id="buyPrice">—</div>
+                    <div class="price-block-sub">ARS / USDT</div>
+                </div>
+                <div class="price-block sell">
+                    <div class="price-block-label">Vendiste a</div>
+                    <div class="price-block-value" id="sellPrice">—</div>
+                    <div class="price-block-sub">ARS / USDT</div>
+                </div>
+            </div>
+
+            <!-- Ganancia por USDT -->
+            <div class="result-big" id="myResultColor">
+                <div class="result-label" id="myResultLabel">Ganancia por USDT</div>
+                <div class="result-value" id="myGainPct">—</div>
+                <div class="result-sub" id="myGainArs">—</div>
+            </div>
+
+            <!-- Detalle con Capital -->
+            <div id="capitalResultBlock" style="display:none; flex-direction:column; gap:8px;">
+                <div class="divider"></div>
+                <div class="grid2">
+                    <div class="mini">
+                        <div class="mini-label">USDT vendidos</div>
+                        <div class="mini-value" id="usdtSold">—</div>
+                    </div>
+                    <div class="mini">
+                        <div class="mini-label">USD comprados</div>
+                        <div class="mini-value" id="totalUsd">—</div>
+                    </div>
+                    <div class="mini">
+                        <div class="mini-label">USDT comprados</div>
+                        <div class="mini-value" id="totalUsdt">—</div>
+                    </div>
+                    <div class="mini">
+                        <div class="mini-label">ARS recuperados</div>
+                        <div class="mini-value" id="totalReturn">—</div>
+                    </div>
+                </div>
+                
+                <!-- Ganancia neta en USDT -->
+                <div class="result-big" id="usdtGainBlock">
+                    <div class="result-label">Ganancia neta en USDT</div>
+                    <div class="result-value" id="usdtGain">—</div>
+                    <div class="result-sub" id="usdtGainSub">—</div>
+                </div>
+
+                <!-- 👇 NUEVO BLOQUE PARA GANANCIA EN ARS 👇 -->
+                <div class="result-big" id="arsGainBlock" style="border-left: 4px solid #f0b90b;">
+                    <div class="result-label">Ganancia neta en ARS</div>
+                    <div class="result-value" id="arsGain">—</div>
+                    <div class="result-sub" id="arsGainSub">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje cuando no hay datos -->
+        <div class="hint" id="myHint">Ingresá tu precio de venta para ver resultados</div>
+    </div>
+
 </div>
