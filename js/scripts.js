@@ -327,3 +327,39 @@ window.calcularCiclo = function() {
     }
     document.getElementById('c3_detGananciaTexto').innerHTML = detalleHTML;
 }
+
+// ================================================================
+// 3. CONTROL DE VISIBILIDAD DE PESTAÑAS (KRAKEN)
+// ================================================================
+
+function toggleKraken() {
+    const checkbox = document.getElementById('checkMostrarKraken');
+    const btnKraken = document.getElementById('btnKraken');
+    
+    // 1. Ocultar o mostrar el botón según el estado del checkbox
+    if (checkbox.checked) {
+        btnKraken.style.display = 'block'; // Mostrar
+    } else {
+        btnKraken.style.display = 'none';  // Ocultar
+    }
+
+    // 2. Guardar la preferencia en el navegador (LocalStorage) para que no se olvide
+    localStorage.setItem('mostrarKraken', checkbox.checked);
+}
+
+// 3. Al cargar la página, recordar la última preferencia del usuario
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('checkMostrarKraken');
+    const btnKraken = document.getElementById('btnKraken');
+
+    // Leer lo que guardamos antes (si existe). Si no existe, por defecto es true (mostrar).
+    const recordar = localStorage.getItem('mostrarKraken');
+    
+    if (recordar === 'false') {
+        checkbox.checked = false;
+        btnKraken.style.display = 'none';
+    } else {
+        checkbox.checked = true;
+        btnKraken.style.display = 'block';
+    }
+});

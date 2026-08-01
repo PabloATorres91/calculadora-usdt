@@ -9,14 +9,26 @@
 <body>
 
 <div class="container">
-    <h1>💰 USDT · ARS Calculator</h1>
-    <div class="subtitle">Operaciones de compra/venta con pesos argentinos</div>
+    
+    <!-- CABECERA CON FLEXBOX: Título a la izq, Checkbox a la der -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div>
+            <h1 style="margin-bottom: 0;">💰 USDT · ARS Calculator</h1>
+            <div class="subtitle" style="border-bottom: none; padding-bottom: 0; margin-top: 5px; text-align: left;">Operaciones de compra/venta con pesos argentinos</div>
+        </div>
+        
+        <!-- CHECKBOX A LA DERECHA -->
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6a7e99;">
+            <input type="checkbox" id="checkMostrarKraken" checked onchange="toggleKraken()">
+            <label for="checkMostrarKraken">Mostrar Kraken</label>
+        </div>
+    </div>
 
     <!-- PESTAÑAS -->
     <div class="tabs">
         <button class="tab active" onclick="cargarPagina('pages/spread.html')">📊 Spread P2P</button>
         <button class="tab" onclick="cargarPagina('pages/fiwind.html')">💱 Compra USDT con USD FIWIND</button>
-        <button class="tab" onclick="cargarPagina('pages/kraken.html')">🔁 Ciclo USD/Fiwind/Kraken</button>
+        <button class="tab" id="btnKraken" onclick="cargarPagina('pages/kraken.html')">🔁 Ciclo USD/Fiwind/Kraken</button>
     </div>
 
     <!-- EL ESPACIO DONDE SE CARGARÁ EL CONTENIDO -->
