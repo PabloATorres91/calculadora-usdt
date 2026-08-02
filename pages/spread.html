@@ -9,11 +9,11 @@
             <div class="input-row">
                 <div class="input-group">
                     <label>Precio venta USDT <small>ARS / USDT</small></label>
-                    <input type="number" id="precioVenta" placeholder="Ej: 1200" step="any" value="1599.98" />
+                    <input type="number" id="precioVenta" placeholder="Ej: 1200" step="any" value="" />
                 </div>
                 <div class="input-group">
                     <label>ARS recibidos <small>por la venta</small></label>
-                    <input type="number" id="arsRecibidos" placeholder="Ej: 600000" step="any" value="2000000" />
+                    <input type="number" id="arsRecibidos" placeholder="Ej: 600000" step="any" value="" />
                 </div>
                 <div class="input-group">
                     <label>USDT vendidos <small>calculado</small></label>
@@ -29,11 +29,11 @@
             <div class="input-row">
                 <div class="input-group">
                     <label>Precio compra USDT <small>ARS / USDT</small></label>
-                    <input type="number" id="precioCompra" placeholder="Ej: 1150" step="any" value="1595.36" />
+                    <input type="number" id="precioCompra" placeholder="Ej: 1150" step="any" value="" />
                 </div>
                 <div class="input-group">
                     <label>ARS para recompra <small>invertidos</small></label>
-                    <input type="number" id="arsRecompra" placeholder="Ej: 575000" step="any" value="2000000" />
+                    <input type="number" id="arsRecompra" placeholder="Ej: 575000" step="any" />
                 </div>
                 <div class="input-group">
                     <label>USDT comprados <small>calculado</small></label>
@@ -62,13 +62,25 @@
                 <div class="value" id="gananciaARS">+$0.00</div>
             </div>
             <div class="result-item">
-                <div class="label">USDT operados</div>
+                <div class="label">USDT RECOMPRADOS <small>(Vendidos)</small></div>
                 <div class="value neutral" id="usdtOperados">0.00</div>
             </div>
         </div>
         <div class="detail-box" id="detalleOperacion">
-            📌 <strong>Resumen:</strong> Compraste <strong id="detComprados">0.00</strong> USDT a <strong id="detPrecioCompra">$0.00</strong> ARS y los vendiste a <strong id="detPrecioVenta">$0.00</strong> ARS. 
-            <span id="detGananciaTexto">Ganaste <strong class="highlight-green">+0.00 USDT</strong> (<span class="highlight-green">+0.000%</span> de spread).</span>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #f0b90b;">📌</span>
+                    <span><strong>Recompra:</strong> <span id="detComprados">0.00</span> USDT a <span id="detPrecioCompra">$0.00</span> ARS</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #f0b90b;">📌</span>
+                    <span><strong>Venta:</strong> Vendidos a <span id="detPrecioVenta">$0.00</span> ARS</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #f0b90b;">📌</span>
+                    <span id="detGananciaTexto">Sin ganancia calculada aún</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -103,10 +103,21 @@ window.calcularSpread = function() {
     const precioVentaInput = document.getElementById('precioVenta');
     if(!precioVentaInput) return;
 
+    // Leer valores
     const precioVenta = parseFloat(precioVentaInput.value) || 0;
     const arsRecibidos = parseFloat(document.getElementById('arsRecibidos').value) || 0;
     const precioCompra = parseFloat(document.getElementById('precioCompra').value) || 0;
-    const arsRecompra = parseFloat(document.getElementById('arsRecompra').value) || 0;
+    
+    // Obtener el input de recompra
+    const arsRecompraInput = document.getElementById('arsRecompra');
+    let arsRecompra = parseFloat(arsRecompraInput.value) || 0;
+
+    // Lógica clave: Si ARS Recibidos tiene un valor válido, forzamos a que Recompra tome el mismo valor
+    // (Esto evita que se quede con el 575000 de ejemplo si el usuario no lo borró)
+    if (arsRecibidos > 0) {
+        arsRecompra = arsRecibidos;
+        arsRecompraInput.value = arsRecibidos; // Actualizamos el valor visual del input
+    }
 
     let cantidadCompra = 0;
     if (precioCompra > 0) cantidadCompra = arsRecompra / precioCompra;
@@ -128,24 +139,26 @@ window.calcularSpread = function() {
 
     document.getElementById('gananciaPorcentaje').textContent = `${signo}${gananciaPorcentaje.toFixed(3)}%`;
     document.getElementById('gananciaPorcentaje').className = `value ${colorClass}`;
-    document.getElementById('gananciaUSDT').textContent = `${signo}${gananciaUSDT.toFixed(6)} USDT`;
+    document.getElementById('gananciaUSDT').textContent = `${signo}${gananciaUSDT.toFixed(2)} USDT`;
     document.getElementById('gananciaUSDT').className = `value ${colorClass}`;
     const signoARS = (gananciaARS >= 0) ? '+' : '';
     document.getElementById('gananciaARS').textContent = `${signoARS}$${gananciaARS.toFixed(2)}`;
     document.getElementById('gananciaARS').className = `value ${colorClass}`;
 
-    document.getElementById('usdtOperados').textContent = cantidadCompra.toFixed(6);
-    document.getElementById('detComprados').textContent = cantidadCompra.toFixed(6);
+    document.getElementById('usdtOperados').textContent = cantidadCompra.toFixed(2);
+    
+    // Actualizar los items del resumen
+    document.getElementById('detComprados').textContent = cantidadCompra.toFixed(2);
     document.getElementById('detPrecioCompra').textContent = `$${precioCompra.toFixed(2)}`;
     document.getElementById('detPrecioVenta').textContent = `$${precioVenta.toFixed(2)}`;
 
     let detalleHTML = '';
     if (gananciaUSDT > 0.000001) {
-        detalleHTML = `Ganaste <strong class="highlight-green">+${gananciaUSDT.toFixed(6)} USDT</strong> (${signo}${gananciaPorcentaje.toFixed(3)}% de spread). 🎯`;
+        detalleHTML = `✅ <span class="highlight-green">Ganaste +${gananciaUSDT.toFixed(2)} USDT</span> (${signo}${gananciaPorcentaje.toFixed(3)}% de spread). 🎯`;
     } else if (gananciaUSDT < -0.000001) {
-        detalleHTML = `Perdiste <strong class="highlight-red">${gananciaUSDT.toFixed(6)} USDT</strong> (${gananciaPorcentaje.toFixed(3)}% de spread). ⚠️`;
+        detalleHTML = `⚠️ <span class="highlight-red">Perdiste ${gananciaUSDT.toFixed(2)} USDT</span> (${gananciaPorcentaje.toFixed(3)}% de spread).`;
     } else {
-        detalleHTML = `Operación en equilibrio. Sin ganancia ni pérdida. ⚖️`;
+        detalleHTML = `⚖️ Operación en equilibrio. Sin ganancia ni pérdida.`;
     }
     document.getElementById('detGananciaTexto').innerHTML = detalleHTML;
 }
@@ -259,7 +272,7 @@ window.actualizarPreciosFiwind = async function() {
         }
 
         if (!usdPriceInput.value || usdPriceInput.value === "" || usdPriceInput.value === "Cargando...") {
-            usdPriceInput.value = "1495";
+            usdPriceInput.value = "";
         }
 
         window.calcularFiwind();

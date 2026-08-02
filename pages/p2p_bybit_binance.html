@@ -1,0 +1,51 @@
+<div id="tab_bybit_binance" class="tab-content" style="display:block; min-height: 400px;">
+    <div class="section">
+        <h2>📊 P2P Bybit (Venta) - Binance (Compra)</h2>
+        <div class="input-row">
+            <div class="input-group">
+                <label>Capital en ARS <small>a invertir</small></label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="number" id="capitalArsPB" placeholder="150000" step="any" value="150000" />
+                </div>
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label>Precio Venta Bybit <small>ARS / USDT</small></label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="number" id="precioVentaBybit" placeholder="1550" step="any" />
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Precio Compra Binance <small>ARS / USDT</small></label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="number" id="precioCompraBinance" placeholder="1500" step="any" />
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 15px; display: flex; gap: 12px;">
+            <button class="btn" onclick="window.calcularP2PBB()">⟳ Calcular</button>
+        </div>
+    </div>
+
+    <div class="result-section" id="resultadosP2PBB">
+        <h2>📊 Resultados</h2>
+        <div class="result-grid">
+            <div class="result-item">
+                <div class="label">USDT comprados</div>
+                <div class="value" id="usdtCompradosPB">0.00</div>
+            </div>
+            <div class="result-item">
+                <div class="label">Ganancia en ARS</div>
+                <div class="value" id="gananciaARSPB">$0.00</div>
+            </div>
+            <div class="result-item">
+                <div class="label">Ganancia %</div>
+                <div class="value" id="gananciaPorcentajePB">0.00%</div>
+            </div>
+        </div>
+    </div>
+</div>
