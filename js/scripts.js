@@ -25,31 +25,55 @@ async function cargarPagina(rutaHtml) {
                 eval(scripts[i].innerHTML); 
             }
 
-            // 5. Ejecutar la función de cálculo inicial de esa pestaña según el nombre del archivo
+            // ... (código anterior) ...
+
             if (rutaHtml.includes('spread.html') && typeof window.calcularSpread === 'function') {
-                // ASIGNAR EVENTOS DE SPREAD ANTES DE CALCULAR
                 const inputsSpread = ['precioVenta', 'arsRecibidos', 'precioCompra', 'arsRecompra'];
+                // Restaurar valores guardados
+                restaurarPestana(inputsSpread);
                 agregarEventosAInputs(inputsSpread, window.calcularSpread);
+                // Guardar automáticamente cada vez que se escribe (ya lo hace el evento input, pero reforzamos)
+                inputsSpread.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
                 setTimeout(window.calcularSpread, 100);
             } else if (rutaHtml.includes('fiwind.html') && typeof window.calcularFiwind === 'function') {
-                // 1. ASIGNAR EVENTOS A LOS INPUTS DE FIWIND
                 const inputsFiwind = ['usdPrice', 'usdtRate', 'myPrice', 'capitalArs'];
+                restaurarPestana(inputsFiwind);
                 agregarEventosAInputs(inputsFiwind, window.calcularFiwind);
-                
-                // 2. LLAMAMOS A LA API PARA TRAER PRECIOS AL ABRIR LA PESTAÑA
-                // El await funciona ahora porque la función es 'async'
+                inputsFiwind.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
                 (async () => {
                     await window.actualizarPreciosFiwind();
-                    // 3. CALCULAMOS LA PESTAÑA CON LOS NUEVOS VALORES (después de que llegue la API)
                     setTimeout(window.calcularFiwind, 100);
                 })();
-
+            } else if (rutaHtml.includes('p2p_bybit_binance.html') && typeof window.calcularP2PBB === 'function') {
+                const inputsP2P = [
+                    'p2p_capital', 'p2p_precioVentaBybit', 'p2p_precioBrutoBinance',
+                    'p2p_capital2', 'p2p_precioVentaBinance', 'p2p_precioBrutoBybit'
+                ];
+                restaurarPestana(inputsP2P);
+                agregarEventosAInputs(inputsP2P, window.calcularP2PBB);
+                inputsP2P.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
+                setTimeout(window.calcularP2PBB, 100);
             } else if (rutaHtml.includes('kraken.html') && typeof window.calcularCiclo === 'function') {
-                // ASIGNAR EVENTOS DE KRAKEN ANTES DE CALCULAR
                 const inputsKraken = ['c3_usdtVendido', 'c3_arsRecibidos', 'c3_tasaCompraUsd', 'c3_tasaFiwind', 'c3_tasaUsdtUsdc', 'c3_tasaKraken'];
+                restaurarPestana(inputsKraken);
                 agregarEventosAInputs(inputsKraken, window.calcularCiclo);
+                inputsKraken.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
                 setTimeout(window.calcularCiclo, 100);
             }
+
+            // ... (código siguiente) ...
         })
         .catch(error => {
             contenedor.innerHTML = `<p style="color: #f05a5a; text-align:center;">Error al cargar la página: ${error.message}</p>`;
@@ -342,6 +366,184 @@ window.calcularCiclo = function() {
 }
 
 // ================================================================
+// 4. PESTAÑA P2P BYBIT - BINANCE (NUEVO)
+// ================================================================
+
+// Cambiar entre sub-pestañas
+function cambiarSubPestana(num) {
+    const sub1 = document.getElementById('sub1');
+    const sub2 = document.getElementById('sub2');
+    const btn1 = document.getElementById('btnSub1');
+    const btn2 = document.getElementById('btnSub2');
+
+    if (num === 1) {
+        sub1.style.display = 'block';
+        sub2.style.display = 'none';
+        btn1.className = 'btn';
+        btn2.className = 'btn-secondary';
+        setTimeout(window.calcularP2PBB, 100);
+    } else {
+        sub1.style.display = 'none';
+        sub2.style.display = 'block';
+        btn1.className = 'btn-secondary';
+        btn2.className = 'btn';
+        setTimeout(window.calcularP2PBB, 100);
+    }
+}
+
+// Función Principal de Cálculo
+window.calcularP2PBB = function() {
+    const sub1 = document.getElementById('sub1');
+    const sub2 = document.getElementById('sub2');
+
+    // ============================================
+    // CÁLCULO OPCIÓN 1: Bybit Venta -> Binance Compra
+    // ============================================
+    if (sub1.style.display !== 'none') {
+        // Leer los datos
+        const capital = parseFloat(document.getElementById('p2p_capital').value) || 0;
+        const precioVentaBybit = parseFloat(document.getElementById('p2p_precioVentaBybit').value) || 0;
+        const precioBrutoBinance = parseFloat(document.getElementById('p2p_precioBrutoBinance').value) || 0;
+
+        const comisionBinance = 0.002; // 0.2%
+        
+        // 1. Precio Real Binance (lo que realmente te cuesta cada USDT)
+        const precioRealBinance = precioBrutoBinance * (1 + comisionBinance);
+
+        // 2. USDT Vendidos (Capital / precio de venta en Bybit)
+        const usdtVendidos = precioVentaBybit > 0 ? capital / precioVentaBybit : 0;
+
+        // 3. USDT Comprados en Binance (Capital / Precio Real con comisión)
+        const usdtComprados = precioBrutoBinance > 0 ? capital / (precioBrutoBinance * (1 + comisionBinance)) : 0;
+
+        // 4. Ganancia Neta
+        const gananciaUSDT = usdtComprados - usdtVendidos;
+        const gananciaARS = gananciaUSDT * precioVentaBybit; // Valorizado al precio de venta
+        
+        // 👇 NUEVO: SPREAD REAL DESPUÉS DE COMISIÓN 👇
+        const spreadReal = usdtVendidos > 0 ? (gananciaUSDT / usdtVendidos) * 100 : 0;
+        const signoSpread = spreadReal >= 0 ? '+' : '';
+        const colorSpread = spreadReal >= 0 ? 'positive' : 'negative';
+        
+        // Spread mínimo requerido (solo informativo)
+        const spreadMinimo = (1 / (1 - comisionBinance)) - 1;
+
+        // ---------- PRECIO SUGERIDO ----------
+        const spreadObjetivo = 0.002;
+        const precioSugerido = precioVentaBybit / (1 + spreadObjetivo) / (1 + comisionBinance);
+
+        // Mostrar resultados Opción 1
+        document.getElementById('resultadosSub1').style.display = 'block';
+        document.getElementById('p2p_usdtVendidos').textContent = usdtVendidos.toFixed(2);
+        document.getElementById('p2p_precioRealBinance').textContent = '$' + precioRealBinance.toFixed(2);
+        document.getElementById('p2p_usdtComprados').textContent = usdtComprados.toFixed(2);
+        // 👇 MOSTRAR EL SPREAD REAL 👇
+        document.getElementById('p2p_spreadReal1').textContent = signoSpread + spreadReal.toFixed(2) + '%';
+        document.getElementById('p2p_spreadReal1').className = `value ${colorSpread}`;
+        
+        const colorUSDT1 = gananciaUSDT >= 0 ? 'positive' : 'negative';
+        
+        document.getElementById('p2p_gananciaUSDT1').textContent = (gananciaUSDT >= 0 ? '+' : '') + gananciaUSDT.toFixed(2) + ' USDT';
+        document.getElementById('p2p_gananciaUSDT1').className = `value ${colorUSDT1}`;
+        document.getElementById('p2p_gananciaARS1').textContent = (gananciaARS >= 0 ? '+' : '') + '$' + gananciaARS.toFixed(2) + ' ARS';
+        
+        document.getElementById('p2p_spreadMinimo1').textContent = (spreadMinimo * 100).toFixed(2) + '%';
+        document.getElementById('p2p_detVentaUSDT').textContent = usdtVendidos.toFixed(2);
+        document.getElementById('p2p_detCompraUSDT').textContent = usdtComprados.toFixed(2);
+
+        // Precio final real
+        document.getElementById('p2p_precioFinalReal').textContent = '$' + precioRealBinance.toFixed(2);
+
+        // ---------- MOSTRAR LA SUGERENCIA ----------
+        const sugerenciaSpan = document.getElementById('p2p_sugerenciaTexto1');
+        if (sugerenciaSpan) {
+            sugerenciaSpan.textContent = '💰 Sugerido: $' + precioSugerido.toFixed(2);
+
+            const ayudaMensaje = document.getElementById('p2p_mensajeAyuda1');
+            if (ayudaMensaje) {
+                const numerosSpan = ayudaMensaje.querySelector('#p2p_numerosAyuda');
+                const formulaSpan = ayudaMensaje.querySelector('#p2p_formulaNumeros');
+                if (numerosSpan) {
+                    numerosSpan.innerHTML = `
+                        <strong>Tu precio de venta Bybit:</strong> $${precioVentaBybit.toFixed(2)}<br>
+                        <strong>Precio objetivo:</strong> $${precioSugerido.toFixed(2)}<br>
+                        <strong>Spread objetivo:</strong> 0.20%<br>
+                        <strong>Comisión Binance:</strong> 0.20%
+                    `;
+                }
+                if (formulaSpan) {
+                    const precioConComision = precioVentaBybit / 1.002;
+                    const precioFinal = precioConComision / 1.002;
+                    formulaSpan.textContent = `$${precioVentaBybit.toFixed(2)} ÷ 1.002 ÷ 1.002 = $${precioFinal.toFixed(2)}`;
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // CÁLCULO OPCIÓN 2: Binance Venta -> Bybit Compra
+    // ============================================
+    if (sub2.style.display !== 'none') {
+        const capital = parseFloat(document.getElementById('p2p_capital2').value) || 0;
+        const precioVentaBinance = parseFloat(document.getElementById('p2p_precioVentaBinance').value) || 0;
+        const precioBrutoBybit = parseFloat(document.getElementById('p2p_precioBrutoBybit').value) || 0;
+
+        // Comisión Binance del 0.2% sobre el precio de venta (el precio real baja)
+        const comisionBinance = 0.002; // 0.2%
+        const precioRealBinance = precioVentaBinance * (1 - comisionBinance);
+
+        // Cálculos
+        const usdtVendidos = precioVentaBinance > 0 ? capital / precioVentaBinance : 0;
+        const arsObtenidos = usdtVendidos * precioRealBinance;
+        const usdtComprados = precioBrutoBybit > 0 ? arsObtenidos / precioBrutoBybit : 0;
+        
+        // Ganancia en USDT
+        const gananciaUSDT = usdtComprados - usdtVendidos;
+        const gananciaARS = gananciaUSDT * precioVentaBinance;
+        const gananciaPct = capital > 0 ? (gananciaARS / capital) * 100 : 0;
+
+        // Spread mínimo requerido para cubrir la comisión
+        // Fórmula: 1 / (1 - comisión) - 1
+        const spreadMinimo = (1 / (1 - comisionBinance)) - 1;
+
+        // Mostrar resultados Opción 2
+        document.getElementById('resultadosSub2').style.display = 'block';
+        document.getElementById('p2p_usdtVendidos2').textContent = usdtVendidos.toFixed(2);
+        document.getElementById('p2p_precioRealBinance2').textContent = '$' + precioRealBinance.toFixed(2);
+        document.getElementById('p2p_usdtComprados2').textContent = usdtComprados.toFixed(2);
+        
+        const colorUSDT2 = gananciaUSDT >= 0 ? 'positive' : 'negative';
+        document.getElementById('p2p_gananciaUSDT2').textContent = (gananciaUSDT >= 0 ? '+' : '') + gananciaUSDT.toFixed(2) + ' USDT';
+        document.getElementById('p2p_gananciaUSDT2').className = `value ${colorUSDT2}`;
+        document.getElementById('p2p_gananciaARS2').textContent = (gananciaARS >= 0 ? '+' : '') + '$' + gananciaARS.toFixed(2) + ' ARS';
+        
+        document.getElementById('p2p_spreadMinimo2').textContent = (spreadMinimo * 100).toFixed(2) + '%';
+        document.getElementById('p2p_detVentaUSDT2').textContent = usdtVendidos.toFixed(2);
+        document.getElementById('p2p_detCompraUSDT2').textContent = usdtComprados.toFixed(2);
+    }
+}
+
+// Agregar eventos automáticos para la pestaña Binance-Bybit
+function agregarEventosP2P() {
+    const inputsP2P = [
+        'p2p_capital', 'p2p_precioVentaBybit', 'p2p_precioBrutoBinance',
+        'p2p_capital2', 'p2p_precioVentaBinance', 'p2p_precioBrutoBybit'
+    ];
+    agregarEventosAInputs(inputsP2P, window.calcularP2PBB);
+}
+
+// Y activar eventos al cargar la pestaña
+window.agregarEventosP2P = agregarEventosP2P;
+
+// Lógica para mostrar/ocultar la ayuda al hacer clic en el ícono ⓘ
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'p2p_iconoAyuda1') {
+        const ayuda = document.getElementById('p2p_mensajeAyuda1');
+        ayuda.style.display = ayuda.style.display === 'none' ? 'block' : 'none';
+    }
+});
+
+// ================================================================
 // 3. CONTROL DE VISIBILIDAD DE PESTAÑAS (KRAKEN)
 // ================================================================
 
@@ -376,3 +578,36 @@ document.addEventListener('DOMContentLoaded', function() {
         btnKraken.style.display = 'block';
     }
 });
+
+// ================================================================
+// 5. SISTEMA DE GUARDADO DE DATOS ENTRE PESTAÑAS (localStorage)
+// ================================================================
+
+// Función para guardar el valor de un input en localStorage
+function guardarInput(idInput) {
+    const input = document.getElementById(idInput);
+    if (input) {
+        localStorage.setItem(idInput, input.value);
+    }
+}
+
+// Función para restaurar el valor de un input desde localStorage
+function restaurarInput(idInput) {
+    const input = document.getElementById(idInput);
+    if (input) {
+        const valorGuardado = localStorage.getItem(idInput);
+        if (valorGuardado !== null) {
+            input.value = valorGuardado;
+        }
+    }
+}
+
+// Función para restaurar TODOS los inputs de una pestaña específica
+function restaurarPestana(listaIds) {
+    listaIds.forEach(id => restaurarInput(id));
+}
+
+// Función para guardar TODOS los inputs de una pestaña específica (se llama con cada tecla)
+function guardarPestana(listaIds) {
+    listaIds.forEach(id => guardarInput(id));
+}
