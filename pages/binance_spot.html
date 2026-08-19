@@ -1,0 +1,100 @@
+<div id="tab_binance_spot" class="tab-content" style="display:block; min-height: 500px;">
+
+    <!-- PRECIO SPOT BINANCE -->
+    <div class="section" style="border-left-color: #f0b90b;">
+        <h2>💹 Precio Spot USDT/ARS <span>Binance</span></h2>
+        <div class="input-row">
+            <div class="input-group" style="flex: 2;">
+                <label>Precio spot <small>ARS / USDT (auto)</small></label>
+                <input type="number" id="bs_precioSpot" step="any" placeholder="Cargando..." readonly style="cursor: default; opacity: 0.8;" />
+            </div>
+            <div class="input-group" style="flex: 0; align-self: flex-end;">
+                <button class="btn" onclick="window.actualizarPrecioSpotBinance()" style="white-space: nowrap;">🔄 Actualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRECIOS POR ESTRATEGIA (lado a lado) -->
+    <div class="compare-grid">
+        <div class="compare-col">
+            <div class="strategy-title strategy-bybit">
+                <span>📤</span> Bybit P2P Venta → Binance Spot Compra
+            </div>
+            <div class="input-group">
+                <label>Precio Venta Bybit <small>ARS / USDT (P2P)</small></label>
+                <input type="number" id="bs_precioVentaBybit" placeholder="1581.99" step="any" />
+            </div>
+            <div id="bs_bybitInfo" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+                <span style="color: #f0b90b; font-weight: 600;">Bybit:</span> vendés a $<span id="bs_bybitPrecio">0</span> · comprás spot final (c/ 0.1%) a $<span id="bs_bybitSpotEfectivo">0</span> → <span id="bs_bybitGananciaPct" style="font-weight: 700;">+0.00%</span>
+            </div>
+        </div>
+        <div class="compare-col">
+            <div class="strategy-title strategy-binance">
+                <span>📥</span> Binance P2P Venta → Binance Spot Compra
+            </div>
+            <div class="input-group">
+                <label>Precio Venta Binance <small>ARS / USDT (P2P)</small></label>
+                <input type="number" id="bs_precioVentaBinance" placeholder="1581.99" step="any" />
+            </div>
+            <div id="bs_binanceInfo" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+                <span style="color: #3b82f6; font-weight: 600;">Binance:</span> vendés a $<span id="bs_binancePrecio">0</span> · comprás spot final (c/ 0.1%) a $<span id="bs_binanceSpotEfectivo">0</span> → <span id="bs_binanceGananciaPct" style="font-weight: 700;">+0.00%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA COMPARATIVA POR MONTO -->
+    <div class="section" style="border-left-color: #3b82f6;">
+        <h2>📊 USDT según capital invertido</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #2a3442;">
+                        <th style="text-align: left; padding: 10px 8px; color: #8899b0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Capital ARS</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #f0b90b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Bybit → Spot</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #f0b90b; font-size: 12px;">%</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #3b82f6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Binance → Spot</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #3b82f6; font-size: 12px;">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$500.000</td>
+                        <td id="bs_row_500k_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_500k_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="bs_row_500k_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_500k_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$1.000.000</td>
+                        <td id="bs_row_1m_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_1m_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="bs_row_1m_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_1m_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$1.500.000</td>
+                        <td id="bs_row_1m5_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_1m5_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="bs_row_1m5_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_1m5_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$2.000.000</td>
+                        <td id="bs_row_2m_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_2m_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="bs_row_2m_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="bs_row_2m_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BANNER GANADOR -->
+    <div class="winner-banner" id="bs_winnerBanner" style="display:none;">
+        <div class="winner-label">🏆 ESTRATEGIA MÁS RENTABLE</div>
+        <div class="winner-name" id="bs_winnerName">—</div>
+        <div class="winner-detail" id="bs_winnerDetail">—</div>
+    </div>
+
+</div>

@@ -72,6 +72,19 @@ async function cargarPagina(rutaHtml) {
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
                 setTimeout(window.calcularCiclo, 100);
+            } else if (rutaHtml.includes('binance_spot.html') && typeof window.calcularBinanceSpot === 'function') {
+                const inputsBS = ['bs_precioSpot', 'bs_precioVentaBybit', 'bs_precioVentaBinance'];
+                restaurarPestana(inputsBS);
+                agregarEventosAInputs(inputsBS, window.calcularBinanceSpot);
+                inputsBS.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
+                window.actualizarPrecioSpotBinance().then(() => {
+                    setTimeout(window.calcularBinanceSpot, 100);
+                }).catch(() => {
+                    setTimeout(window.calcularBinanceSpot, 100);
+                });
             }
 
             // ... (código siguiente) ...
@@ -494,7 +507,154 @@ window.calcularP2PBB = function() {
 }
 
 // ================================================================
-// 3. CONTROL DE VISIBILIDAD DE PESTAÑAS (KRAKEN)
+// 5. PESTAÑA P2P → BINANCE SPOT
+// ================================================================
+
+window.calcularBinanceSpot = function() {
+    const precioSpotInput = document.getElementById('bs_precioSpot');
+    if (!precioSpotInput) return;
+
+    const precioSpot = parseFloat(precioSpotInput.value) || 0;
+    const precioVentaBybit = parseFloat(document.getElementById('bs_precioVentaBybit').value) || 0;
+    const precioVentaBinance = parseFloat(document.getElementById('bs_precioVentaBinance').value) || 0;
+    const comisionBinanceP2P = 0.002;
+    const comisionSpot = 0.001;
+    const precioSpotEfectivo = precioSpot * (1 + comisionSpot);
+
+    const capitales = [
+        { amount: 500000,  key: '500k' },
+        { amount: 1000000, key: '1m' },
+        { amount: 1500000, key: '1m5' },
+        { amount: 2000000, key: '2m' }
+    ];
+
+    // Info bajo los inputs de precio
+    const elBybitInfo = document.getElementById('bs_bybitInfo');
+    const elBinanceInfo = document.getElementById('bs_binanceInfo');
+
+    if (elBybitInfo) elBybitInfo.style.display = precioVentaBybit > 0 ? 'block' : 'none';
+    if (elBinanceInfo) elBinanceInfo.style.display = precioVentaBinance > 0 ? 'block' : 'none';
+
+    if (precioVentaBybit > 0 && precioSpot > 0) {
+        const gananciaPctBybit = ((1 / precioSpotEfectivo) - (1 / precioVentaBybit)) / (1 / precioVentaBybit) * 100;
+        document.getElementById('bs_bybitPrecio').textContent = precioVentaBybit.toFixed(2);
+        document.getElementById('bs_bybitSpotEfectivo').textContent = precioSpotEfectivo.toFixed(2);
+        const elPct = document.getElementById('bs_bybitGananciaPct');
+        elPct.textContent = (gananciaPctBybit >= 0 ? '+' : '') + gananciaPctBybit.toFixed(3) + '%';
+        elPct.style.color = gananciaPctBybit >= 0 ? '#00c897' : '#f05a5a';
+    }
+
+    if (precioVentaBinance > 0 && precioSpot > 0) {
+        const gananciaPctBinance = ((1 * (1 - comisionBinanceP2P) / precioSpotEfectivo) - (1 / precioVentaBinance)) / (1 / precioVentaBinance) * 100;
+        document.getElementById('bs_binancePrecio').textContent = precioVentaBinance.toFixed(2);
+        document.getElementById('bs_binanceSpotEfectivo').textContent = precioSpotEfectivo.toFixed(2);
+        const elPct = document.getElementById('bs_binanceGananciaPct');
+        elPct.textContent = (gananciaPctBinance >= 0 ? '+' : '') + gananciaPctBinance.toFixed(3) + '%';
+        elPct.style.color = gananciaPctBinance >= 0 ? '#00c897' : '#f05a5a';
+    }
+
+    // Calcular por cada monto
+    capitales.forEach(function(cap) {
+        // Bybit → Spot
+        const usdtVendidosBybit = precioVentaBybit > 0 ? cap.amount / precioVentaBybit : 0;
+        const usdtCompradosBybit = precioSpotEfectivo > 0 ? cap.amount / precioSpotEfectivo : 0;
+        const gananciaBybit = usdtCompradosBybit - usdtVendidosBybit;
+        const gananciaPctBybit = usdtVendidosBybit > 0 ? (gananciaBybit / usdtVendidosBybit) * 100 : 0;
+
+        const elBybit = document.getElementById('bs_row_' + cap.key + '_bybit');
+        const elBybitPct = document.getElementById('bs_row_' + cap.key + '_bybit_pct');
+        if (elBybit) elBybit.textContent = usdtVendidosBybit > 0 ? gananciaBybit.toFixed(2) + ' USDT' : '—';
+        if (elBybitPct) elBybitPct.textContent = usdtVendidosBybit > 0 ? (gananciaPctBybit >= 0 ? '+' : '') + gananciaPctBybit.toFixed(3) + '%' : '—';
+        if (elBybit) elBybit.style.color = gananciaBybit >= 0 ? '#00c897' : '#f05a5a';
+        if (elBybitPct) elBybitPct.style.color = gananciaBybit >= 0 ? '#00c897' : '#f05a5a';
+
+        // Binance → Spot
+        const arsNetoBinance = cap.amount * (1 - comisionBinanceP2P);
+        const usdtVendidosBinance = precioVentaBinance > 0 ? cap.amount / precioVentaBinance : 0;
+        const usdtCompradosBinance = precioSpotEfectivo > 0 ? arsNetoBinance / precioSpotEfectivo : 0;
+        const gananciaBinance = usdtCompradosBinance - usdtVendidosBinance;
+        const gananciaPctBinance = usdtVendidosBinance > 0 ? (gananciaBinance / usdtVendidosBinance) * 100 : 0;
+
+        const elBinance = document.getElementById('bs_row_' + cap.key + '_binance');
+        const elBinancePct = document.getElementById('bs_row_' + cap.key + '_binance_pct');
+        if (elBinance) elBinance.textContent = usdtVendidosBinance > 0 ? gananciaBinance.toFixed(2) + ' USDT' : '—';
+        if (elBinancePct) elBinancePct.textContent = usdtVendidosBinance > 0 ? (gananciaPctBinance >= 0 ? '+' : '') + gananciaPctBinance.toFixed(3) + '%' : '—';
+        if (elBinance) elBinance.style.color = gananciaBinance >= 0 ? '#00c897' : '#f05a5a';
+        if (elBinancePct) elBinancePct.style.color = gananciaBinance >= 0 ? '#00c897' : '#f05a5a';
+    });
+
+    // BANNER GANADOR
+    const banner = document.getElementById('bs_winnerBanner');
+    const nameEl = document.getElementById('bs_winnerName');
+    const detailEl = document.getElementById('bs_winnerDetail');
+
+    if (precioVentaBybit > 0 || precioVentaBinance > 0) {
+        banner.style.display = 'block';
+
+        // Calcular ganancia en 2M para el banner
+        const usdtBybit2m = precioVentaBybit > 0 ? 2000000 / precioVentaBybit : 0;
+        const ganBybit2m = precioSpotEfectivo > 0 ? (2000000 / precioSpotEfectivo) - usdtBybit2m : 0;
+        const ganPctBybit2m = usdtBybit2m > 0 ? (ganBybit2m / usdtBybit2m) * 100 : 0;
+
+        const arsNetoBinance2m = 2000000 * (1 - comisionBinanceP2P);
+        const usdtBinance2m = precioVentaBinance > 0 ? 2000000 / precioVentaBinance : 0;
+        const ganBinance2m = precioSpotEfectivo > 0 ? (arsNetoBinance2m / precioSpotEfectivo) - usdtBinance2m : 0;
+        const ganPctBinance2m = usdtBinance2m > 0 ? (ganBinance2m / usdtBinance2m) * 100 : 0;
+
+        if (ganPctBybit2m > ganPctBinance2m + 0.001) {
+            banner.className = 'winner-banner winner-bybit';
+            nameEl.textContent = 'Bybit P2P → Binance Spot';
+            detailEl.textContent = '+' + ganBybit2m.toFixed(2) + ' USDT en $2M  ·  ' + (ganPctBybit2m >= 0 ? '+' : '') + ganPctBybit2m.toFixed(3) + '%  ·  +' + (ganPctBybit2m - ganPctBinance2m).toFixed(3) + '% sobre Binance';
+        } else if (ganPctBinance2m > ganPctBybit2m + 0.001) {
+            banner.className = 'winner-banner winner-binance';
+            nameEl.textContent = 'Binance P2P → Binance Spot';
+            detailEl.textContent = '+' + ganBinance2m.toFixed(2) + ' USDT en $2M  ·  ' + (ganPctBinance2m >= 0 ? '+' : '') + ganPctBinance2m.toFixed(3) + '%  ·  +' + (ganPctBinance2m - ganPctBybit2m).toFixed(3) + '% sobre Bybit';
+        } else {
+            banner.className = 'winner-banner winner-empate';
+            nameEl.textContent = 'Empate — Ambas estrategias dan igual';
+            detailEl.textContent = 'Diferencia despreciable en todos los montos';
+        }
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
+// -------------------------------------------------------------
+// CONSULTA DE PRECIO SPOT BINANCE (EN VIVO)
+// -------------------------------------------------------------
+window.actualizarPrecioSpotBinance = async function() {
+    const precioSpotInput = document.getElementById('bs_precioSpot');
+    if (!precioSpotInput) return;
+
+    const oldPrice = precioSpotInput.value;
+    precioSpotInput.placeholder = "Cargando...";
+
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTARS');
+
+        if (!response.ok) throw new Error("Error al conectar con Binance");
+
+        const data = await response.json();
+        const precio = parseFloat(data.price);
+
+        if (precio && !isNaN(precio) && precio > 0) {
+            precioSpotInput.value = precio.toFixed(2);
+        } else {
+            precioSpotInput.value = oldPrice || "";
+        }
+
+    } catch (error) {
+        console.error("Error al obtener precio spot de Binance:", error);
+        if (!precioSpotInput.value || precioSpotInput.value === "") {
+            precioSpotInput.value = oldPrice || "";
+        }
+    } finally {
+        precioSpotInput.placeholder = "Ej: 1584.70";
+    }
+}
+
+// ================================================================
+// 6. CONTROL DE VISIBILIDAD DE PESTAÑAS (KRAKEN)
 // ================================================================
 
 function toggleKraken() {
