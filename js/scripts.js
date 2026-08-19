@@ -37,6 +37,7 @@ async function cargarPagina(rutaHtml) {
                     const el = document.getElementById(id);
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
+                agregarSyncBybit('precioVenta');
                 setTimeout(window.calcularSpread, 100);
             } else if (rutaHtml.includes('fiwind.html') && typeof window.calcularFiwind === 'function') {
                 const inputsFiwind = ['usdPrice', 'usdtRate', 'myPrice', 'capitalArs'];
@@ -46,6 +47,7 @@ async function cargarPagina(rutaHtml) {
                     const el = document.getElementById(id);
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
+                agregarSyncBybit('myPrice');
                 (async () => {
                     await window.actualizarPreciosFiwind();
                     setTimeout(window.calcularFiwind, 100);
@@ -62,6 +64,7 @@ async function cargarPagina(rutaHtml) {
                     const el = document.getElementById(id);
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
+                agregarSyncBybit('p2p_precioVentaBybit');
                 setTimeout(window.calcularP2PBB, 100);
             } else if (rutaHtml.includes('kraken.html') && typeof window.calcularCiclo === 'function') {
                 const inputsKraken = ['c3_usdtVendido', 'c3_arsRecibidos', 'c3_tasaCompraUsd', 'c3_tasaFiwind', 'c3_tasaUsdtUsdc', 'c3_tasaKraken'];
@@ -80,6 +83,7 @@ async function cargarPagina(rutaHtml) {
                     const el = document.getElementById(id);
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
+                agregarSyncBybit('bs_precioVentaBybit');
                 window.actualizarPrecioSpotBinance().then(() => {
                     setTimeout(window.calcularBinanceSpot, 100);
                 }).catch(() => {
@@ -117,6 +121,30 @@ function agregarEventosAInputs(listaIds, funcionCallback) {
             }
         }
     });
+}
+
+// Sincronizar "Precio Venta Bybit/USDT" entre los 4 tabs que lo usan
+const SYNC_BYBIT_IDS = ['precioVenta', 'p2p_precioVentaBybit', 'bs_precioVentaBybit', 'myPrice'];
+function syncBybitPrecio(sourceId) {
+    const sourceEl = document.getElementById(sourceId);
+    if (!sourceEl) return;
+    const val = sourceEl.value;
+    SYNC_BYBIT_IDS.forEach(function(id) {
+        localStorage.setItem(id, val);
+        const el = document.getElementById(id);
+        if (el && el.value !== val) {
+            el.value = val;
+        }
+    });
+}
+
+function agregarSyncBybit(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el || el.dataset.syncBybitAdded) return;
+    el.dataset.syncBybitAdded = 'true';
+    el.addEventListener('input', function() { syncBybitPrecio(inputId); });
+    el.addEventListener('blur', function() { syncBybitPrecio(inputId); });
+    el.addEventListener('change', function() { syncBybitPrecio(inputId); });
 }
 
 // Activar la clase 'active' en las pestañas al hacer clic
