@@ -52,7 +52,7 @@ async function cargarPagina(rutaHtml) {
                 })();
             } else if (rutaHtml.includes('p2p_bybit_binance.html') && typeof window.calcularP2PBB === 'function') {
                 const inputsP2P = [
-                    'p2p_capital', 'p2p_objetivo',
+                    'p2p_capital',
                     'p2p_precioVentaBybit', 'p2p_precioBrutoBinance',
                     'p2p_precioVentaBinance', 'p2p_precioBrutoBybit'
                 ];
@@ -384,41 +384,112 @@ window.calcularCiclo = function() {
 // ================================================================
 
 window.calcularP2PBB = function() {
-    const capitalInput = document.getElementById('p2p_capital');
-    if (!capitalInput) return;
+    const precioVentaBybitInput = document.getElementById('p2p_precioVentaBybit');
+    if (!precioVentaBybitInput) return;
 
-    const capital = parseFloat(document.getElementById('p2p_capital').value) || 0;
-    const objetivo = (parseFloat(document.getElementById('p2p_objetivo').value) || 0) / 100;
+    const precioVentaBybit = parseFloat(precioVentaBybitInput.value) || 0;
+    const precioBrutoBinance = parseFloat(document.getElementById('p2p_precioBrutoBinance').value) || 0;
+    const precioVentaBinance = parseFloat(document.getElementById('p2p_precioVentaBinance').value) || 0;
+    const precioBrutoBybit = parseFloat(document.getElementById('p2p_precioBrutoBybit').value) || 0;
     const comisionBinance = 0.002;
 
-    // ============================================
-    // ESTRATEGIA 1: Bybit Venta → Binance Compra
-    // ============================================
-    const precioVentaBybit = parseFloat(document.getElementById('p2p_precioVentaBybit').value) || 0;
-    const precioBrutoBinance = parseFloat(document.getElementById('p2p_precioBrutoBinance').value) || 0;
-
     const precioRealBinance1 = precioBrutoBinance * (1 + comisionBinance);
+    const precioRealBinance2 = precioVentaBinance * (1 - comisionBinance);
+
+    const capitales = [
+        { amount: 500000,  key: '500k' },
+        { amount: 1000000, key: '1m' },
+        { amount: 1500000, key: '1m5' },
+        { amount: 2000000, key: '2m' }
+    ];
+
+    // Info bajo los inputs
+    const elInfo1 = document.getElementById('p2p_info1');
+    const elInfo2 = document.getElementById('p2p_info2');
+
+    if (elInfo1) elInfo1.style.display = (precioVentaBybit > 0 && precioBrutoBinance > 0) ? 'block' : 'none';
+    if (elInfo2) elInfo2.style.display = (precioVentaBinance > 0 && precioBrutoBybit > 0) ? 'block' : 'none';
+
+    if (precioVentaBybit > 0 && precioBrutoBinance > 0) {
+        const gananciaPct1 = ((1 / precioRealBinance1) - (1 / precioVentaBybit)) / (1 / precioVentaBybit) * 100;
+        document.getElementById('p2p_info1_venta').textContent = precioVentaBybit.toFixed(2);
+        document.getElementById('p2p_info1_compra').textContent = precioRealBinance1.toFixed(2);
+        const elPct = document.getElementById('p2p_info1_pct');
+        elPct.textContent = (gananciaPct1 >= 0 ? '+' : '') + gananciaPct1.toFixed(3) + '%';
+        elPct.style.color = gananciaPct1 >= 0 ? '#00c897' : '#f05a5a';
+    }
+
+    if (precioVentaBinance > 0 && precioBrutoBybit > 0) {
+        const gananciaPct2 = ((1 * (1 - comisionBinance) / precioBrutoBybit) - (1 / precioVentaBinance)) / (1 / precioVentaBinance) * 100;
+        document.getElementById('p2p_info2_venta').textContent = precioRealBinance2.toFixed(2);
+        document.getElementById('p2p_info2_compra').textContent = precioBrutoBybit.toFixed(2);
+        const elPct = document.getElementById('p2p_info2_pct');
+        elPct.textContent = (gananciaPct2 >= 0 ? '+' : '') + gananciaPct2.toFixed(3) + '%';
+        elPct.style.color = gananciaPct2 >= 0 ? '#00c897' : '#f05a5a';
+    }
+
+    let ganPctS1_2m = 0;
+    let ganPctS2_2m = 0;
+    let ganS1_2m = 0;
+    let ganS2_2m = 0;
+
+    capitales.forEach(function(cap) {
+        // Estrategia 1: Bybit Venta → Binance Compra
+        const usdtVendidos1 = precioVentaBybit > 0 ? cap.amount / precioVentaBybit : 0;
+        const usdtComprados1 = precioRealBinance1 > 0 ? cap.amount / precioRealBinance1 : 0;
+        const ganancia1 = usdtComprados1 - usdtVendidos1;
+        const gananciaPct1 = usdtVendidos1 > 0 ? (ganancia1 / usdtVendidos1) * 100 : 0;
+
+        const el1 = document.getElementById('p2p_row_' + cap.key + '_s1');
+        const el1Pct = document.getElementById('p2p_row_' + cap.key + '_s1_pct');
+        if (el1) el1.textContent = usdtVendidos1 > 0 ? ganancia1.toFixed(2) + ' USDT' : '—';
+        if (el1Pct) el1Pct.textContent = usdtVendidos1 > 0 ? (gananciaPct1 >= 0 ? '+' : '') + gananciaPct1.toFixed(3) + '%' : '—';
+        if (el1) el1.style.color = ganancia1 >= 0 ? '#00c897' : '#f05a5a';
+        if (el1Pct) el1Pct.style.color = ganancia1 >= 0 ? '#00c897' : '#f05a5a';
+
+        // Estrategia 2: Binance Venta → Bybit Compra
+        const arsNetos2 = cap.amount * (1 - comisionBinance);
+        const usdtVendidos2 = precioVentaBinance > 0 ? cap.amount / precioVentaBinance : 0;
+        const usdtComprados2 = precioBrutoBybit > 0 ? arsNetos2 / precioBrutoBybit : 0;
+        const ganancia2 = usdtComprados2 - usdtVendidos2;
+        const gananciaPct2 = usdtVendidos2 > 0 ? (ganancia2 / usdtVendidos2) * 100 : 0;
+
+        const el2 = document.getElementById('p2p_row_' + cap.key + '_s2');
+        const el2Pct = document.getElementById('p2p_row_' + cap.key + '_s2_pct');
+        if (el2) el2.textContent = usdtVendidos2 > 0 ? ganancia2.toFixed(2) + ' USDT' : '—';
+        if (el2Pct) el2Pct.textContent = usdtVendidos2 > 0 ? (gananciaPct2 >= 0 ? '+' : '') + gananciaPct2.toFixed(3) + '%' : '—';
+        if (el2) el2.style.color = ganancia2 >= 0 ? '#00c897' : '#f05a5a';
+        if (el2Pct) el2Pct.style.color = ganancia2 >= 0 ? '#00c897' : '#f05a5a';
+
+        if (cap.key === '2m') {
+            ganPctS1_2m = gananciaPct1;
+            ganPctS2_2m = gananciaPct2;
+            ganS1_2m = ganancia1;
+            ganS2_2m = ganancia2;
+        }
+    });
+
+    // ============================================
+    // RESULTADOS DETALLADOS (con capital del usuario)
+    // ============================================
+    const capital = parseFloat(document.getElementById('p2p_capital').value) || 0;
+
+    // Estrategia 1: Bybit Venta → Binance Compra
     const usdtVendidos1 = precioVentaBybit > 0 ? capital / precioVentaBybit : 0;
-    const usdtComprados1 = precioBrutoBinance > 0 ? capital / precioRealBinance1 : 0;
+    const usdtComprados1 = precioRealBinance1 > 0 ? capital / precioRealBinance1 : 0;
     const gananciaUSDT1 = usdtComprados1 - usdtVendidos1;
     const gananciaARS1 = gananciaUSDT1 * precioVentaBybit;
     const gananciaPctARS1 = capital > 0 ? (gananciaARS1 / capital) * 100 : 0;
     const gananciaPctUSDT1 = usdtVendidos1 > 0 ? (gananciaUSDT1 / usdtVendidos1) * 100 : 0;
-    const spreadReal1 = usdtVendidos1 > 0 ? (gananciaUSDT1 / usdtVendidos1) * 100 : 0;
+    const spreadReal1 = gananciaPctUSDT1;
+    const precioSugerido1 = precioVentaBybit / (1 + 0.002) / (1 + comisionBinance);
 
-    // Precio sugerido: precio máximo para publicar en Binance y ganar el objetivo
-    const precioSugerido1 = precioVentaBybit / (1 + objetivo) / (1 + comisionBinance);
-
-    // Mostrar resultados estrategia 1
     document.getElementById('resultadosSub1').style.display = 'block';
-    document.getElementById('p2p_precioEfectivoBinance1').textContent = precioBrutoBinance > 0 ? 'Precio efectivo (con 0.2%): $' + precioRealBinance1.toFixed(2) : 'Precio efectivo: —';
     document.getElementById('p2p_usdtVendidos').textContent = usdtVendidos1.toFixed(2);
     document.getElementById('p2p_usdtComprados').textContent = usdtComprados1.toFixed(2);
-
     const signoSpread1 = spreadReal1 >= 0 ? '+' : '';
     document.getElementById('p2p_spreadReal1').textContent = signoSpread1 + spreadReal1.toFixed(2) + '%';
     document.getElementById('p2p_spreadReal1').className = 'value ' + (spreadReal1 >= 0 ? 'positive' : 'negative');
-
     const color1 = gananciaUSDT1 >= 0 ? 'positive' : 'negative';
     document.getElementById('p2p_gananciaUSDT1').textContent = (gananciaUSDT1 >= 0 ? '+' : '') + gananciaUSDT1.toFixed(2) + ' USDT';
     document.getElementById('p2p_gananciaUSDT1').className = 'value ' + color1;
@@ -428,41 +499,27 @@ window.calcularP2PBB = function() {
     document.getElementById('p2p_gananciaPctARS1').className = 'value ' + color1;
     document.getElementById('p2p_gananciaPctUSDT1').textContent = (gananciaPctUSDT1 >= 0 ? '+' : '') + gananciaPctUSDT1.toFixed(3) + '%';
     document.getElementById('p2p_gananciaPctUSDT1').className = 'value ' + color1;
-
-    // Precio sugerido
     document.getElementById('p2p_sugerenciaTexto1').textContent = '$' + precioSugerido1.toFixed(2);
     document.getElementById('p2p_formulaTexto1').textContent =
-        '$' + precioVentaBybit.toFixed(2) + ' ÷ ' + (1 + objetivo).toFixed(4) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido1.toFixed(2);
+        '$' + precioVentaBybit.toFixed(2) + ' ÷ 1.0020 ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido1.toFixed(2);
 
-    // ============================================
-    // ESTRATEGIA 2: Binance Venta → Bybit Compra
-    // ============================================
-    const precioVentaBinance = parseFloat(document.getElementById('p2p_precioVentaBinance').value) || 0;
-    const precioBrutoBybit = parseFloat(document.getElementById('p2p_precioBrutoBybit').value) || 0;
-
-    const arsObtenidos2 = capital * (1 - comisionBinance);
+    // Estrategia 2: Binance Venta → Bybit Compra
+    const arsNetos2 = capital * (1 - comisionBinance);
     const usdtVendidos2 = precioVentaBinance > 0 ? capital / precioVentaBinance : 0;
-    const usdtComprados2 = precioBrutoBybit > 0 ? arsObtenidos2 / precioBrutoBybit : 0;
+    const usdtComprados2 = precioBrutoBybit > 0 ? arsNetos2 / precioBrutoBybit : 0;
     const gananciaUSDT2 = usdtComprados2 - usdtVendidos2;
     const gananciaARS2 = (usdtComprados2 * precioVentaBinance) - capital;
     const gananciaPctARS2 = capital > 0 ? (gananciaARS2 / capital) * 100 : 0;
     const gananciaPctUSDT2 = usdtVendidos2 > 0 ? (gananciaUSDT2 / usdtVendidos2) * 100 : 0;
-    const spreadReal2 = usdtVendidos2 > 0 ? (gananciaUSDT2 / usdtVendidos2) * 100 : 0;
+    const spreadReal2 = gananciaPctUSDT2;
+    const precioSugerido2 = precioVentaBinance * (1 - comisionBinance) / (1 + 0.002);
 
-    // Precio sugerido: precio máximo para publicar en Bybit y ganar el objetivo
-    const precioSugerido2 = precioVentaBinance * (1 - comisionBinance) / (1 + objetivo);
-
-    // Mostrar resultados estrategia 2
-    const precioRealBinance2 = precioVentaBinance * (1 - comisionBinance);
     document.getElementById('resultadosSub2').style.display = 'block';
-    document.getElementById('p2p_precioEfectivoBinance2').textContent = precioVentaBinance > 0 ? 'Precio efectivo (con 0.2%): $' + precioRealBinance2.toFixed(2) : 'Precio efectivo: —';
     document.getElementById('p2p_usdtVendidos2').textContent = usdtVendidos2.toFixed(2);
     document.getElementById('p2p_usdtComprados2').textContent = usdtComprados2.toFixed(2);
-
     const signoSpread2 = spreadReal2 >= 0 ? '+' : '';
     document.getElementById('p2p_spreadReal2').textContent = signoSpread2 + spreadReal2.toFixed(2) + '%';
     document.getElementById('p2p_spreadReal2').className = 'value ' + (spreadReal2 >= 0 ? 'positive' : 'negative');
-
     const color2 = gananciaUSDT2 >= 0 ? 'positive' : 'negative';
     document.getElementById('p2p_gananciaUSDT2').textContent = (gananciaUSDT2 >= 0 ? '+' : '') + gananciaUSDT2.toFixed(2) + ' USDT';
     document.getElementById('p2p_gananciaUSDT2').className = 'value ' + color2;
@@ -472,34 +529,30 @@ window.calcularP2PBB = function() {
     document.getElementById('p2p_gananciaPctARS2').className = 'value ' + color2;
     document.getElementById('p2p_gananciaPctUSDT2').textContent = (gananciaPctUSDT2 >= 0 ? '+' : '') + gananciaPctUSDT2.toFixed(3) + '%';
     document.getElementById('p2p_gananciaPctUSDT2').className = 'value ' + color2;
-
-    // Precio sugerido
     document.getElementById('p2p_sugerenciaTexto2').textContent = '$' + precioSugerido2.toFixed(2);
     document.getElementById('p2p_formulaTexto2').textContent =
-        '$' + precioVentaBinance.toFixed(2) + ' × ' + (1 - comisionBinance).toFixed(4) + ' ÷ ' + (1 + objetivo).toFixed(4) + ' = $' + precioSugerido2.toFixed(2);
+        '$' + precioVentaBinance.toFixed(2) + ' × ' + (1 - comisionBinance).toFixed(4) + ' ÷ 1.0020 = $' + precioSugerido2.toFixed(2);
 
-    // ============================================
     // BANNER GANADOR
-    // ============================================
     const banner = document.getElementById('winnerBanner');
     const nameEl = document.getElementById('winnerName');
     const detailEl = document.getElementById('winnerDetail');
 
-    if (capital > 0 && (precioVentaBybit > 0 || precioVentaBinance > 0)) {
+    if (precioVentaBybit > 0 || precioVentaBinance > 0) {
         banner.style.display = 'block';
 
-        if (gananciaARS1 > gananciaARS2) {
+        if (ganPctS1_2m > ganPctS2_2m + 0.001) {
             banner.className = 'winner-banner winner-bybit';
             nameEl.textContent = 'Bybit Venta → Binance Compra';
-            detailEl.textContent = '+' + gananciaUSDT1.toFixed(2) + ' USDT  ·  +$' + gananciaARS1.toFixed(2) + ' ARS  ·  +' + gananciaPctARS1.toFixed(3) + '%';
-        } else if (gananciaARS2 > gananciaARS1) {
+            detailEl.textContent = '+' + ganS1_2m.toFixed(2) + ' USDT en $2M  ·  ' + (ganPctS1_2m >= 0 ? '+' : '') + ganPctS1_2m.toFixed(3) + '%  ·  +' + (ganPctS1_2m - ganPctS2_2m).toFixed(3) + '% sobre Estrategia 2';
+        } else if (ganPctS2_2m > ganPctS1_2m + 0.001) {
             banner.className = 'winner-banner winner-binance';
             nameEl.textContent = 'Binance Venta → Bybit Compra';
-            detailEl.textContent = '+' + gananciaUSDT2.toFixed(2) + ' USDT  ·  +$' + gananciaARS2.toFixed(2) + ' ARS  ·  +' + gananciaPctARS2.toFixed(3) + '%';
+            detailEl.textContent = '+' + ganS2_2m.toFixed(2) + ' USDT en $2M  ·  ' + (ganPctS2_2m >= 0 ? '+' : '') + ganPctS2_2m.toFixed(3) + '%  ·  +' + (ganPctS2_2m - ganPctS1_2m).toFixed(3) + '% sobre Estrategia 1';
         } else {
             banner.className = 'winner-banner winner-empate';
             nameEl.textContent = 'Empate — Ambas estrategias dan igual';
-            detailEl.textContent = 'Ganancia: +' + gananciaUSDT1.toFixed(2) + ' USDT  ·  +$' + gananciaARS1.toFixed(2) + ' ARS';
+            detailEl.textContent = 'Diferencia despreciable en todos los montos';
         }
     } else {
         banner.style.display = 'none';

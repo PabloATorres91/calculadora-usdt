@@ -1,25 +1,6 @@
 <div id="tab_bybit_binance" class="tab-content" style="display:block; min-height: 500px;">
 
-    <!-- INPUTS COMPARTIDOS -->
-    <div class="section">
-        <h2>📥 Datos de la operación</h2>
-        <div class="input-row">
-            <div class="input-group">
-                <label>Capital en ARS</label>
-                <div class="input-wrap"><span class="prefix">$</span>
-                    <input type="number" id="p2p_capital" placeholder="150000" step="any" value="150000" />
-                </div>
-            </div>
-            <div class="input-group">
-                <label>% Ganancia objetivo <small>después de comisión</small></label>
-                <div class="input-wrap"><span class="prefix">%</span>
-                    <input type="number" id="p2p_objetivo" placeholder="0.20" step="any" value="0.20" />
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PRECIOS POR ESTRATEGIA (lado a lado) -->
+    <!-- ESTRATEGIAS: PRECIOS -->
     <div class="compare-grid">
         <div class="compare-col">
             <div class="strategy-title strategy-bybit">
@@ -32,7 +13,10 @@
             <div class="input-group">
                 <label>Precio Compra Binance <small>ARS / USDT (bruto)</small></label>
                 <input type="number" id="p2p_precioBrutoBinance" placeholder="1500" step="any" />
-                <div class="precio-efectivo" id="p2p_precioEfectivoBinance1">Precio efectivo: —</div>
+            </div>
+            <div id="p2p_info1" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+                <span style="color: #f0b90b; font-weight: 600;">Bybit:</span> vendés a $<span id="p2p_info1_venta">0</span> ·
+                <span style="color: #3b82f6; font-weight: 600;">Binance:</span> comprás final (c/ 0.2%) a $<span id="p2p_info1_compra">0</span> → <span id="p2p_info1_pct" style="font-weight: 700;">+0.00%</span>
             </div>
         </div>
         <div class="compare-col">
@@ -42,106 +26,168 @@
             <div class="input-group">
                 <label>Precio Venta Binance <small>ARS / USDT</small></label>
                 <input type="number" id="p2p_precioVentaBinance" placeholder="1581.99" step="any" />
-                <div class="precio-efectivo" id="p2p_precioEfectivoBinance2">Precio efectivo: —</div>
             </div>
             <div class="input-group">
                 <label>Precio Compra Bybit <small>ARS / USDT</small></label>
                 <input type="number" id="p2p_precioBrutoBybit" placeholder="1500" step="any" />
+            </div>
+            <div id="p2p_info2" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+                <span style="color: #3b82f6; font-weight: 600;">Binance:</span> vendés final (c/ 0.2%) a $<span id="p2p_info2_venta">0</span> ·
+                <span style="color: #f0b90b; font-weight: 600;">Bybit:</span> comprás a $<span id="p2p_info2_compra">0</span> → <span id="p2p_info2_pct" style="font-weight: 700;">+0.00%</span>
             </div>
         </div>
     </div>
 
     <!-- BANNER GANADOR -->
     <div class="winner-banner" id="winnerBanner" style="display:none;">
-        <div class="winner-label">🏆 OPERACIÓN MÁS RENTABLE</div>
+        <div class="winner-label">🏆 ESTRATEGIA MÁS RENTABLE</div>
         <div class="winner-name" id="winnerName">—</div>
         <div class="winner-detail" id="winnerDetail">—</div>
     </div>
 
-    <!-- RESULTADOS LADO A LADO -->
-    <div class="compare-grid">
-        <div class="compare-col">
-            <div class="result-section" id="resultadosSub1">
-                <div class="result-grid">
-                    <div class="result-item">
-                        <div class="label">USDT Vendidos (Bybit)</div>
-                        <div class="value neutral" id="p2p_usdtVendidos">0.00</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">USDT Comprados (Binance)</div>
-                        <div class="value neutral" id="p2p_usdtComprados">0.00</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Spread Real <small>(después de comisión)</small></div>
-                        <div class="value" id="p2p_spreadReal1">+0.00%</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">USDT Ganados (neto)</div>
-                        <div class="value" id="p2p_gananciaUSDT1">+0.00 USDT</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">ARS Ganados</div>
-                        <div class="value" id="p2p_gananciaARS1">+$0.00</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Ganancia % (sobre ARS)</div>
-                        <div class="value" id="p2p_gananciaPctARS1">+0.00%</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Ganancia % (sobre USDT)</div>
-                        <div class="value" id="p2p_gananciaPctUSDT1">+0.00%</div>
-                    </div>
-                </div>
-                <div class="sugerencia-box" id="p2p_sugerenciaBox1">
-                    <div class="sugerencia-precio">
-                        <span>Precio sugerido publicar en Binance:</span>
-                        <span class="sugerencia-valor" id="p2p_sugerenciaTexto1">$0.00</span>
-                    </div>
-                    <div class="sugerencia-formula" id="p2p_formulaTexto1">
-                        $0.00 ÷ 1.002 ÷ 1.002 = $0.00
-                    </div>
+    <!-- TABLA COMPARATIVA POR MONTO -->
+    <div class="section" style="border-left-color: #3b82f6;">
+        <h2>📊 USDT según capital invertido</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #2a3442;">
+                        <th style="text-align: left; padding: 10px 8px; color: #8899b0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Capital ARS</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #f0b90b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Bybit → Binance</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #f0b90b; font-size: 12px;">%</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #3b82f6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Binance → Bybit</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #3b82f6; font-size: 12px;">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$500.000</td>
+                        <td id="p2p_row_500k_s1" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_500k_s1_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="p2p_row_500k_s2" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_500k_s2_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$1.000.000</td>
+                        <td id="p2p_row_1m_s1" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_1m_s1_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="p2p_row_1m_s2" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_1m_s2_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$1.500.000</td>
+                        <td id="p2p_row_1m5_s1" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_1m5_s1_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="p2p_row_1m5_s2" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_1m5_s2_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">$2.000.000</td>
+                        <td id="p2p_row_2m_s1" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_2m_s1_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="p2p_row_2m_s2" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="p2p_row_2m_s2_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CAPITAL + RESULTADOS DETALLADOS -->
+    <div class="section" style="border-left-color: #f0b90b; margin-top: 24px;">
+        <h2>📋 Detalle por capital específico</h2>
+        <div class="input-row" style="justify-content: flex-start; gap: 16px; margin-bottom: 16px;">
+            <div class="input-group" style="max-width: 220px;">
+                <label>Capital en ARS</label>
+                <div class="input-wrap"><span class="prefix">$</span>
+                    <input type="number" id="p2p_capital" placeholder="150000" step="any" value="150000" />
                 </div>
             </div>
         </div>
-        <div class="compare-col">
-            <div class="result-section" id="resultadosSub2">
-                <div class="result-grid">
-                    <div class="result-item">
-                        <div class="label">USDT Vendidos (Binance)</div>
-                        <div class="value neutral" id="p2p_usdtVendidos2">0.00</div>
+        <div class="compare-grid">
+            <div class="compare-col">
+                <div class="result-section" id="resultadosSub1">
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <div class="label">USDT Vendidos (Bybit)</div>
+                            <div class="value neutral" id="p2p_usdtVendidos">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">USDT Comprados (Binance)</div>
+                            <div class="value neutral" id="p2p_usdtComprados">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Spread Real <small>(después de comisión)</small></div>
+                            <div class="value" id="p2p_spreadReal1">+0.00%</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">USDT Ganados (neto)</div>
+                            <div class="value" id="p2p_gananciaUSDT1">+0.00 USDT</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">ARS Ganados</div>
+                            <div class="value" id="p2p_gananciaARS1">+$0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Ganancia % (sobre ARS)</div>
+                            <div class="value" id="p2p_gananciaPctARS1">+0.00%</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Ganancia % (sobre USDT)</div>
+                            <div class="value" id="p2p_gananciaPctUSDT1">+0.00%</div>
+                        </div>
                     </div>
-                    <div class="result-item">
-                        <div class="label">USDT Comprados (Bybit)</div>
-                        <div class="value neutral" id="p2p_usdtComprados2">0.00</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Spread Real <small>(después de comisión)</small></div>
-                        <div class="value" id="p2p_spreadReal2">+0.00%</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">USDT Ganados (neto)</div>
-                        <div class="value" id="p2p_gananciaUSDT2">+0.00 USDT</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">ARS Ganados</div>
-                        <div class="value" id="p2p_gananciaARS2">+$0.00</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Ganancia % (sobre ARS)</div>
-                        <div class="value" id="p2p_gananciaPctARS2">+0.00%</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Ganancia % (sobre USDT)</div>
-                        <div class="value" id="p2p_gananciaPctUSDT2">+0.00%</div>
+                    <div class="sugerencia-box" id="p2p_sugerenciaBox1">
+                        <div class="sugerencia-precio">
+                            <span>Precio sugerido publicar en Binance:</span>
+                            <span class="sugerencia-valor" id="p2p_sugerenciaTexto1">$0.00</span>
+                        </div>
+                        <div class="sugerencia-formula" id="p2p_formulaTexto1">
+                            $0.00 ÷ 1.002 ÷ 1.002 = $0.00
+                        </div>
                     </div>
                 </div>
-                <div class="sugerencia-box" id="p2p_sugerenciaBox2">
-                    <div class="sugerencia-precio">
-                        <span>Precio sugerido publicar en Bybit:</span>
-                        <span class="sugerencia-valor" id="p2p_sugerenciaTexto2">$0.00</span>
+            </div>
+            <div class="compare-col">
+                <div class="result-section" id="resultadosSub2">
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <div class="label">USDT Vendidos (Binance)</div>
+                            <div class="value neutral" id="p2p_usdtVendidos2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">USDT Comprados (Bybit)</div>
+                            <div class="value neutral" id="p2p_usdtComprados2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Spread Real <small>(después de comisión)</small></div>
+                            <div class="value" id="p2p_spreadReal2">+0.00%</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">USDT Ganados (neto)</div>
+                            <div class="value" id="p2p_gananciaUSDT2">+0.00 USDT</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">ARS Ganados</div>
+                            <div class="value" id="p2p_gananciaARS2">+$0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Ganancia % (sobre ARS)</div>
+                            <div class="value" id="p2p_gananciaPctARS2">+0.00%</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Ganancia % (sobre USDT)</div>
+                            <div class="value" id="p2p_gananciaPctUSDT2">+0.00%</div>
+                        </div>
                     </div>
-                    <div class="sugerencia-formula" id="p2p_formulaTexto2">
-                        $0.00 × 0.998 ÷ 1.002 = $0.00
+                    <div class="sugerencia-box" id="p2p_sugerenciaBox2">
+                        <div class="sugerencia-precio">
+                            <span>Precio sugerido publicar en Bybit:</span>
+                            <span class="sugerencia-valor" id="p2p_sugerenciaTexto2">$0.00</span>
+                        </div>
+                        <div class="sugerencia-formula" id="p2p_formulaTexto2">
+                            $0.00 × 0.998 ÷ 1.002 = $0.00
+                        </div>
                     </div>
                 </div>
             </div>
