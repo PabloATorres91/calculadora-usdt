@@ -1,0 +1,168 @@
+<div id="tab_spot_retiro" class="tab-content" style="display:block; min-height: 500px;">
+
+    <!-- PRECIO SPOT BINANCE -->
+    <div class="section" style="border-left-color: #f0b90b;">
+        <h2>💹 Precio Spot USDT/ARS <span>Binance</span></h2>
+        <div class="input-row">
+            <div class="input-group" style="flex: 2;">
+                <label>Precio spot <small>ARS / USDT (auto)</small></label>
+                <input type="number" id="sv_precioSpot" step="any" placeholder="Cargando..." readonly style="cursor: default; opacity: 0.8;" />
+            </div>
+            <div class="input-group" style="flex: 0; align-self: flex-end;">
+                <button class="btn" onclick="window.actualizarPrecioSpotRetiro()" style="white-space: nowrap;">🔄 Actualizar</button>
+            </div>
+        </div>
+        <div id="sv_notaSpot" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+            Para que la vuelta sea rentable, necesitás comprar P2P por debajo de:
+            <br><span style="color: #f0b90b;">Bybit:</span> $<span id="sv_breakBybit">—</span> (al menos $<span id="sv_diffBybit">—</span> menos por USDT)
+            <br><span style="color: #3b82f6;">Binance:</span> $<span id="sv_breakBinance">—</span> (al menos $<span id="sv_diffBinance">—</span> menos por USDT)
+        </div>
+    </div>
+
+    <!-- INPUTS DE LA VUELTA -->
+    <div class="compare-grid">
+        <div class="compare-col">
+            <div class="strategy-title strategy-bybit">
+                <span>🔄</span> Recompra Bybit P2P
+            </div>
+            <div class="input-group">
+                <label>Precio Compra Bybit <small>ARS / USDT</small></label>
+                <input type="number" id="sv_precioCompraBybit" placeholder="1500" step="any" />
+            </div>
+        </div>
+        <div class="compare-col">
+            <div class="strategy-title strategy-binance">
+                <span>🔄</span> Recompra Binance P2P
+            </div>
+            <div class="input-group">
+                <label>Precio Compra Binance <small>ARS / USDT (bruto)</small></label>
+                <input type="number" id="sv_precioCompraBinance" placeholder="1500" step="any" />
+            </div>
+        </div>
+    </div>
+
+    <div class="section" style="border-left-color: #f0b90b; margin-top: 16px;">
+        <div class="input-row" style="justify-content: flex-start; gap: 16px;">
+            <div class="input-group" style="max-width: 220px;">
+                <label>USDT a vender</label>
+                <div class="input-wrap"><span class="prefix">$</span>
+                    <input type="number" id="sv_usdtVender" placeholder="1000" step="any" value="1000" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTADO DE LA VUELTA (lado a lado) -->
+    <div class="compare-grid" style="margin-top: 16px;">
+        <div class="compare-col">
+            <div class="result-section" id="sv_resultBybit">
+                <div style="font-size: 14px; font-weight: 600; color: #f0b90b; margin-bottom: 10px;">📤 Via Bybit P2P</div>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="label">Vendo en Spot</div>
+                        <div class="value neutral" id="sv_bybit_arsSpot">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Retiro bancario <small>(-1%)</small></div>
+                        <div class="value neutral" id="sv_bybit_arsRetiro">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Compro en Bybit</div>
+                        <div class="value neutral" id="sv_bybit_usdtFinal">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Ganancia USDT</div>
+                        <div class="value" id="sv_bybit_ganancia">—</div>
+                    </div>
+                </div>
+                <div class="result-big" id="sv_bybit_resultBig" style="display:none; margin-top: 10px;">
+                    <div class="result-label">Resultado de la vuelta</div>
+                    <div class="result-number" id="sv_bybit_pct">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="compare-col">
+            <div class="result-section" id="sv_resultBinance">
+                <div style="font-size: 14px; font-weight: 600; color: #3b82f6; margin-bottom: 10px;">📤 Via Binance P2P</div>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="label">Vendo en Spot</div>
+                        <div class="value neutral" id="sv_binance_arsSpot">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Retiro bancario <small>(-1%)</small></div>
+                        <div class="value neutral" id="sv_binance_arsRetiro">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Compro en Binance</div>
+                        <div class="value neutral" id="sv_binance_usdtFinal">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Ganancia USDT</div>
+                        <div class="value" id="sv_binance_ganancia">—</div>
+                    </div>
+                </div>
+                <div class="result-big" id="sv_binance_resultBig" style="display:none; margin-top: 10px;">
+                    <div class="result-label">Resultado de la vuelta</div>
+                    <div class="result-number" id="sv_binance_pct">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA COMPARATIVA -->
+    <div class="section" style="border-left-color: #3b82f6; margin-top: 16px;">
+        <h2>📊 Ganancia según USDT vendidos</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #2a3442;">
+                        <th style="text-align: left; padding: 10px 8px; color: #8899b0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">USDT</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #f0b90b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Bybit (neto)</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #f0b90b; font-size: 12px;">%</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #3b82f6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Binance (neto)</th>
+                        <th style="text-align: right; padding: 10px 8px; color: #3b82f6; font-size: 12px;">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">100</td>
+                        <td id="sv_row_100_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_100_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="sv_row_100_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_100_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">500</td>
+                        <td id="sv_row_500_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_500_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="sv_row_500_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_500_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1f2836;">
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">1.000</td>
+                        <td id="sv_row_1k_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_1k_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="sv_row_1k_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_1k_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 8px; color: #e8edf5; font-weight: 600;">5.000</td>
+                        <td id="sv_row_5k_bybit" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_5k_bybit_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                        <td id="sv_row_5k_binance" style="text-align: right; padding: 10px 8px; color: #e8edf5; font-weight: 600;">—</td>
+                        <td id="sv_row_5k_binance_pct" style="text-align: right; padding: 10px 8px; color: #e8edf5;">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BANNER GANADOR -->
+    <div class="winner-banner" id="sv_winnerBanner" style="display:none;">
+        <div class="winner-label">🏆 MEJOR OPCIÓN PARA LA VUELTA</div>
+        <div class="winner-name" id="sv_winnerName">—</div>
+        <div class="winner-detail" id="sv_winnerDetail">—</div>
+    </div>
+
+</div>

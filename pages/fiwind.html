@@ -18,112 +18,85 @@
                         <span class="prefix">$</span>
                         <input type="number" id="usdtRate" placeholder="1.048" value="1.048" step="0.001" />
                     </div>
-                    <!-- EL BOTÓN DEFINITIVO -->
                     <button class="btn" onclick="window.actualizarPreciosFiwind()" style="padding: 10px 12px; font-size: 12px; white-space: nowrap;">🔄 Buscar cotización en vivo</button>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- SECCIÓN 2: Precio de compra implícito -->
-    <div class="section" style="border-left-color: #f5a623;">
-        <h2>🎯 Precio de compra implícito</h2>
-        <div class="result-big orange">
-            <div class="result-label">Costo real del USDT en ARS</div>
-            <div class="result-value" id="costUsdt">—</div>
-            <div class="result-sub">USD × cotización USDT</div>
-        </div>
-        <div class="result-big green">
-            <div class="result-label">Punto de equilibrio (venta mín.)</div>
-            <div class="result-value" id="breakeven">—</div>
-            <div class="result-sub">Por debajo de esto perdés</div>
+        <div id="fiwind_costoRow" style="display:none; margin-top: 10px; font-size: 14px; color: #8899b0; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+            Tipo de cambio implícito USDT/ARS: <strong id="costUsdt" style="color: #f5a623;">—</strong>
         </div>
     </div>
 
-    <!-- SECCIÓN 3: Mi operación real -->
-    <div class="section" style="border-left-color: #00c897;">
-        <h2>💼 Mi operación real</h2>
-        <div class="input-row">
-            <div class="input-group">
-                <label>Mi precio de venta USDT <small>ARS / USDT</small></label>
-                <div class="input-wrap">
-                    <span class="prefix">$</span>
-                    <input type="number" id="myPrice" placeholder="Ej: 1572" step="any" />
-                </div>
-            </div>
-            <div class="input-group">
-                <label>Capital en ARS <small>invertido</small></label>
-                <div class="input-wrap">
-                    <span class="prefix">$</span>
-                    <input type="number" id="capitalArs" placeholder="Ej: 150000" step="any" value="" />
-                </div>
+    <!-- Capital (arriba de los precios de venta) -->
+    <div class="section" style="border-left-color: #8899b0;">
+        <h2>💰 Capital</h2>
+        <div class="input-group" style="max-width: 220px;">
+            <label>Capital en ARS <small>invertido</small></label>
+            <div class="input-wrap">
+                <span class="prefix">$</span>
+                <input type="number" id="capitalArs" placeholder="Ej: 150000" step="any" value="" />
             </div>
         </div>
+    </div>
 
-        <!-- BLOQUE DE RESULTADOS DE MI OPERACIÓN -->
-        <div id="myResultBlock" style="display:none; flex-direction:column; gap:12px; margin-top:12px;">
-            
-            <!-- Comparativa de precios -->
-            <div class="price-compare">
-                <div class="price-block buy">
-                    <div class="price-block-label">Compraste a</div>
-                    <div class="price-block-value" id="buyPrice">—</div>
-                    <div class="price-block-sub">ARS / USDT</div>
-                </div>
-                <div class="price-block sell">
-                    <div class="price-block-label">Vendiste a</div>
-                    <div class="price-block-value" id="sellPrice">—</div>
-                    <div class="price-block-sub">ARS / USDT</div>
-                </div>
+    <!-- PRECIOS DE VENTA (lado a lado) -->
+    <div class="compare-grid">
+        <div class="compare-col">
+            <div class="strategy-title strategy-bybit">
+                <span>📤</span> Venta Bybit <small style="color: #8899b0; font-weight: 400; margin-left: 4px;">0% fee</small>
             </div>
-
-            <!-- Ganancia por USDT -->
-            <div class="result-big" id="myResultColor">
-                <div class="result-label" id="myResultLabel">Ganancia por USDT</div>
-                <div class="result-value" id="myGainPct">—</div>
-                <div class="result-sub" id="myGainArs">—</div>
+            <div class="input-group">
+                <label>Precio venta <small>ARS / USDT</small></label>
+                <input type="number" id="myPrice" placeholder="Ej: 1572" step="any" />
             </div>
-
-            <!-- Detalle con Capital -->
-            <div id="capitalResultBlock" style="display:none; flex-direction:column; gap:8px;">
+            <div id="fiwind_bybitResult" style="display:none; margin-top: 10px; padding: 8px 10px; background: #10171f; border-radius: 8px; font-size: 14px; color: #8899b0; line-height: 1.6;">
+                Comprás a $<span id="fiwind_bybit_buyPrice">—</span><br>
+                Vendés a $<span id="fiwind_bybit_sellPrice">—</span><br>
+                <strong id="fiwind_bybit_pct">—</strong>
+            </div>
+            <div id="fiwind_capitalBybit" style="display:none; margin-top: 8px;">
                 <div class="divider"></div>
                 <div class="grid2">
-                    <div class="mini">
-                        <div class="mini-label">USDT vendidos</div>
-                        <div class="mini-value" id="usdtSold">—</div>
-                    </div>
-                    <div class="mini">
-                        <div class="mini-label">USD comprados</div>
-                        <div class="mini-value" id="totalUsd">—</div>
-                    </div>
-                    <div class="mini">
-                        <div class="mini-label">USDT comprados</div>
-                        <div class="mini-value" id="totalUsdt">—</div>
-                    </div>
-                    <div class="mini">
-                        <div class="mini-label">ARS recuperados</div>
-                        <div class="mini-value" id="totalReturn">—</div>
-                    </div>
+                    <div class="mini"><div class="mini-label">USDT vendidos</div><div class="mini-value" id="fiwind_bybit_usdtSold">—</div></div>
+                    <div class="mini"><div class="mini-label">USD comprados</div><div class="mini-value" id="fiwind_bybit_usdTotal">—</div></div>
+                    <div class="mini"><div class="mini-label">USDT comprados</div><div class="mini-value" id="fiwind_bybit_usdtTotal">—</div></div>
+                    <div class="mini"><div class="mini-label">ARS recuperados</div><div class="mini-value" id="fiwind_bybit_arsReturn">—</div></div>
                 </div>
-                
-                <!-- Ganancia neta en USDT -->
-                <div class="result-big" id="usdtGainBlock">
-                    <div class="result-label">Ganancia neta en USDT</div>
-                    <div class="result-value" id="usdtGain">—</div>
-                    <div class="result-sub" id="usdtGainSub">—</div>
-                </div>
-
-                <!-- 👇 NUEVO BLOQUE PARA GANANCIA EN ARS 👇 -->
-                <div class="result-big" id="arsGainBlock" style="border-left: 4px solid #f0b90b;">
-                    <div class="result-label">Ganancia neta en ARS</div>
-                    <div class="result-value" id="arsGain">—</div>
-                    <div class="result-sub" id="arsGainSub">—</div>
+                <div style="margin-top: 8px; font-size: 14px;">
+                    Ganancia: <strong id="fiwind_bybit_usdtGain">—</strong> · <strong id="fiwind_bybit_arsGain">—</strong>
                 </div>
             </div>
         </div>
 
-        <!-- Mensaje cuando no hay datos -->
-        <div class="hint" id="myHint">Ingresá tu precio de venta para ver resultados</div>
+        <div class="compare-col">
+            <div class="strategy-title strategy-binance">
+                <span>📤</span> Venta Binance <small style="color: #8899b0; font-weight: 400; margin-left: 4px;">0.2% fee</small>
+            </div>
+            <div class="input-group">
+                <label>Precio venta <small>ARS / USDT</small></label>
+                <input type="number" id="myPriceBinance" placeholder="Ej: 1572" step="any" />
+            </div>
+            <div id="fiwind_binanceResult" style="display:none; margin-top: 10px; padding: 8px 10px; background: #10171f; border-radius: 8px; font-size: 14px; color: #8899b0; line-height: 1.6;">
+                Comprás a $<span id="fiwind_binance_buyPrice">—</span><br>
+                Vendés neto $<span id="fiwind_binance_sellPrice">—</span><br>
+                <strong id="fiwind_binance_pct">—</strong>
+            </div>
+            <div id="fiwind_capitalBinance" style="display:none; margin-top: 8px;">
+                <div class="divider"></div>
+                <div class="grid2">
+                    <div class="mini"><div class="mini-label">USDT vendidos</div><div class="mini-value" id="fiwind_binance_usdtSold">—</div></div>
+                    <div class="mini"><div class="mini-label">USD comprados</div><div class="mini-value" id="fiwind_binance_usdTotal">—</div></div>
+                    <div class="mini"><div class="mini-label">USDT comprados</div><div class="mini-value" id="fiwind_binance_usdtTotal">—</div></div>
+                    <div class="mini"><div class="mini-label">ARS recuperados</div><div class="mini-value" id="fiwind_binance_arsReturn">—</div></div>
+                </div>
+                <div style="margin-top: 8px; font-size: 14px;">
+                    Ganancia: <strong id="fiwind_binance_usdtGain">—</strong> · <strong id="fiwind_binance_arsGain">—</strong>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Mensaje cuando no hay datos -->
+    <div class="hint" id="myHint">Ingresá tu precio de venta para ver resultados</div>
 
 </div>

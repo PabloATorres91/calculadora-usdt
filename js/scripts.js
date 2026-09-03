@@ -41,7 +41,7 @@ async function cargarPagina(rutaHtml) {
                 agregarSyncCompra('precioCompra');
                 setTimeout(window.calcularSpread, 100);
             } else if (rutaHtml.includes('fiwind.html') && typeof window.calcularFiwind === 'function') {
-                const inputsFiwind = ['usdPrice', 'usdtRate', 'myPrice', 'capitalArs'];
+                const inputsFiwind = ['usdPrice', 'usdtRate', 'myPrice', 'myPriceBinance', 'capitalArs'];
                 restaurarPestana(inputsFiwind);
                 agregarEventosAInputs(inputsFiwind, window.calcularFiwind);
                 inputsFiwind.forEach(id => {
@@ -90,6 +90,20 @@ async function cargarPagina(rutaHtml) {
                     setTimeout(window.calcularBinanceSpot, 100);
                 }).catch(() => {
                     setTimeout(window.calcularBinanceSpot, 100);
+                });
+            } else if (rutaHtml.includes('spot_retiro.html') && typeof window.calcularSpotRetiro === 'function') {
+                const inputsSV = ['sv_precioCompraBybit', 'sv_precioCompraBinance', 'sv_usdtVender'];
+                restaurarPestana(inputsSV);
+                agregarEventosAInputs(inputsSV, window.calcularSpotRetiro);
+                inputsSV.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
+                agregarSyncCompra('sv_precioCompraBybit');
+                window.actualizarPrecioSpotRetiro().then(() => {
+                    setTimeout(window.calcularSpotRetiro, 100);
+                }).catch(() => {
+                    setTimeout(window.calcularSpotRetiro, 100);
                 });
             }
 
@@ -141,7 +155,7 @@ function syncBybitPrecio(sourceId) {
 }
 
 // Sincronizar "Precio Compra USDT/Bybit" entre tabs
-const SYNC_COMPRA_IDS = ['precioCompra', 'p2p_precioBrutoBybit'];
+const SYNC_COMPRA_IDS = ['precioCompra', 'p2p_precioBrutoBybit', 'sv_precioCompraBybit'];
 function syncCompraPrecio(sourceId) {
     const sourceEl = document.getElementById(sourceId);
     if (!sourceEl) return;
@@ -259,8 +273,6 @@ window.calcularSpread = function() {
 window.calcularFiwind = function() {
     const usdPrice = document.getElementById('usdPrice');
     if(!usdPrice) return;
-
-    // 👇 ESTA LÍNEA EVITA QUE SE ROMPA SI TARDAN EN LLEGAR LOS DATOS
     if(!document.getElementById('costUsdt')) return; 
     
     const usd = parseFloat(usdPrice.value);
@@ -268,70 +280,114 @@ window.calcularFiwind = function() {
     if (isNaN(usd) || isNaN(rate)) return;
 
     const cost = usd * rate;
+    const costoRow = document.getElementById('fiwind_costoRow');
+    if (costoRow) costoRow.style.display = 'flex';
     document.getElementById('costUsdt').textContent = '$ ' + cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('breakeven').textContent = '$ ' + cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const myPriceVal = parseFloat(document.getElementById('myPrice').value);
+    const myPriceBinanceVal = parseFloat(document.getElementById('myPriceBinance').value);
     const capital = parseFloat(document.getElementById('capitalArs').value);
+    const hintEl = document.getElementById('myHint');
 
+    // --- Bybit (0% fee) ---
+    const bybitResult = document.getElementById('fiwind_bybitResult');
+    const bybitCapitalBlock = document.getElementById('fiwind_capitalBybit');
     if (!isNaN(myPriceVal) && myPriceVal > 0) {
-        document.getElementById('myResultBlock').style.display = 'flex';
-        document.getElementById('myHint').style.display = 'none';
+        if (bybitResult) bybitResult.style.display = 'block';
+        if (hintEl) hintEl.style.display = 'none';
 
-        document.getElementById('buyPrice').textContent = '$ ' + cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        document.getElementById('sellPrice').textContent = '$ ' + myPriceVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('fiwind_bybit_buyPrice').textContent = cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('fiwind_bybit_sellPrice').textContent = myPriceVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        const myGainArsVal = myPriceVal - cost;
-        const myGainPctVal = (myGainArsVal / cost) * 100;
-        const isWin = myGainArsVal >= 0;
+        const bybitGain = myPriceVal - cost;
+        const bybitPct = (bybitGain / cost) * 100;
+        const bybitWin = bybitGain >= 0;
+        const pctEl = document.getElementById('fiwind_bybit_pct');
+        pctEl.textContent = (bybitWin ? '+' : '') + bybitPct.toFixed(3) + '%';
+        pctEl.style.color = bybitWin ? '#00c897' : '#f05a5a';
 
-        document.getElementById('myResultColor').className = 'result-big ' + (isWin ? 'green' : 'red');
-        document.getElementById('myResultLabel').textContent = isWin ? 'Ganancia por USDT' : 'Pérdida por USDT';
-        document.getElementById('myGainPct').textContent = (isWin ? '+' : '') + myGainPctVal.toFixed(3) + '%';
-        document.getElementById('myGainArs').textContent = (isWin ? '+' : '') + '$ ' + myGainArsVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ARS por USDT';
+        // Detalle con capital
+        if (!isNaN(capital) && capital > 0 && bybitCapitalBlock) {
+            bybitCapitalBlock.style.display = 'block';
+            const usdtSold = capital / myPriceVal;
+            const usdBought = capital / usd;
+            const usdtBought = capital / cost;
+            const totalReturn = usdtBought * myPriceVal;
+            const usdtGain = usdtBought - usdtSold;
+            const arsGain = totalReturn - capital;
+            const isWin = usdtGain >= 0;
 
-        if (!isNaN(capital) && capital > 0) {
-            document.getElementById('capitalResultBlock').style.display = 'flex';
-            const usdtSoldVal = capital / myPriceVal;
-            const usdBoughtVal = capital / usd;
-            const usdtBoughtVal = capital / cost;
-            const totalReturnVal = usdtBoughtVal * myPriceVal;
-            const usdtGainVal = usdtBoughtVal - usdtSoldVal;
-            const usdtGainPctVal = (usdtGainVal / usdtSoldVal) * 100;
-            const isUsdtWin = usdtGainVal >= 0;
+            document.getElementById('fiwind_bybit_usdtSold').textContent = usdtSold.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
+            document.getElementById('fiwind_bybit_usdTotal').textContent = 'U$D ' + usdBought.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('fiwind_bybit_usdtTotal').textContent = usdtBought.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
+            document.getElementById('fiwind_bybit_arsReturn').textContent = '$ ' + totalReturn.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            document.getElementById('usdtSold').textContent = usdtSoldVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
-            document.getElementById('totalUsd').textContent = 'U$D ' + usdBoughtVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('totalUsdt').textContent = usdtBoughtVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
-            document.getElementById('totalReturn').textContent = '$ ' + totalReturnVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            document.getElementById('usdtGain').textContent = (isUsdtWin ? '+' : '') + usdtGainVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
-            document.getElementById('usdtGainSub').textContent = (isUsdtWin ? '+' : '') + usdtGainPctVal.toFixed(3) + '% · ' + usdtSoldVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' vendidos → ' + usdtBoughtVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' comprados';
-            document.getElementById('usdtGainBlock').className = 'result-big ' + (isUsdtWin ? 'green' : 'red');
-            // =========================================================
-            // 👇 NUEVO CÁLCULO DE GANANCIA EN ARS 👇
-            // =========================================================
-            const arsGainVal = totalReturnVal - capital;
-            const arsGainPctVal = (arsGainVal / capital) * 100;
-            const isArsWin = arsGainVal >= 0;
-
-            // Mostramos el bloque
-            document.getElementById('arsGainBlock').style.display = 'block';
-            
-            document.getElementById('arsGain').textContent = (isArsWin ? '+' : '') + '$ ' + arsGainVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            
-            // 👇 CAMBIO AQUÍ: Agregamos el precio de venta al subtítulo
-            document.getElementById('arsGainSub').textContent = (isArsWin ? '+' : '') + arsGainPctVal.toFixed(3) + '% · Valorizado a tu venta: $' + myPriceVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ARS/USDT';
-            
-            // Le ponemos el color verde si ganó, rojo si perdió
-            document.getElementById('arsGainBlock').className = 'result-big ' + (isArsWin ? 'green' : 'red');
-
-        } else {
-            document.getElementById('capitalResultBlock').style.display = 'none';
+            const gainColor = isWin ? '#00c897' : '#f05a5a';
+            document.getElementById('fiwind_bybit_usdtGain').textContent = (isWin ? '+' : '') + usdtGain.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
+            document.getElementById('fiwind_bybit_usdtGain').style.color = gainColor;
+            document.getElementById('fiwind_bybit_arsGain').textContent = (isWin ? '+' : '') + '$ ' + arsGain.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ARS';
+            document.getElementById('fiwind_bybit_arsGain').style.color = gainColor;
+        } else if (bybitCapitalBlock) {
+            bybitCapitalBlock.style.display = 'none';
         }
     } else {
-        document.getElementById('myResultBlock').style.display = 'none';
-        document.getElementById('myHint').style.display = 'block';
+        if (bybitResult) bybitResult.style.display = 'none';
+        if (bybitCapitalBlock) bybitCapitalBlock.style.display = 'none';
+    }
+
+    // --- Binance (0.2% fee en venta) ---
+    const binanceResult = document.getElementById('fiwind_binanceResult');
+    const binanceCapitalBlock = document.getElementById('fiwind_capitalBinance');
+    const COMISION_BINANCE = 0.002;
+    if (!isNaN(myPriceBinanceVal) && myPriceBinanceVal > 0) {
+        if (binanceResult) binanceResult.style.display = 'block';
+        if (hintEl) hintEl.style.display = 'none';
+
+        const sellNet = myPriceBinanceVal * (1 - COMISION_BINANCE);
+        document.getElementById('fiwind_binance_buyPrice').textContent = cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('fiwind_binance_sellPrice').textContent = sellNet.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const binanceGain = sellNet - cost;
+        const binancePct = (binanceGain / cost) * 100;
+        const binanceWin = binanceGain >= 0;
+        const pctEl = document.getElementById('fiwind_binance_pct');
+        pctEl.textContent = (binanceWin ? '+' : '') + binancePct.toFixed(3) + '%';
+        pctEl.style.color = binanceWin ? '#00c897' : '#f05a5a';
+
+        // Detalle con capital
+        if (!isNaN(capital) && capital > 0 && binanceCapitalBlock) {
+            binanceCapitalBlock.style.display = 'block';
+            const usdtSold = capital / myPriceBinanceVal;
+            const usdBought = capital / usd;
+            const usdtBought = capital / cost;
+            const totalReturn = usdtBought * sellNet;
+            const usdtGain = usdtBought - usdtSold;
+            const arsGain = totalReturn - capital;
+            const isWin = usdtGain >= 0;
+
+            document.getElementById('fiwind_binance_usdtSold').textContent = usdtSold.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
+            document.getElementById('fiwind_binance_usdTotal').textContent = 'U$D ' + usdBought.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('fiwind_binance_usdtTotal').textContent = usdtBought.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
+            document.getElementById('fiwind_binance_arsReturn').textContent = '$ ' + totalReturn.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const gainColor = isWin ? '#00c897' : '#f05a5a';
+            document.getElementById('fiwind_binance_usdtGain').textContent = (isWin ? '+' : '') + usdtGain.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT';
+            document.getElementById('fiwind_binance_usdtGain').style.color = gainColor;
+            document.getElementById('fiwind_binance_arsGain').textContent = (isWin ? '+' : '') + '$ ' + arsGain.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ARS';
+            document.getElementById('fiwind_binance_arsGain').style.color = gainColor;
+        } else if (binanceCapitalBlock) {
+            binanceCapitalBlock.style.display = 'none';
+        }
+    } else {
+        if (binanceResult) binanceResult.style.display = 'none';
+        if (binanceCapitalBlock) binanceCapitalBlock.style.display = 'none';
+    }
+
+    // Hint
+    if (hintEl) {
+        const bybitOk = !isNaN(myPriceVal) && myPriceVal > 0;
+        const binanceOk = !isNaN(myPriceBinanceVal) && myPriceBinanceVal > 0;
+        hintEl.style.display = (bybitOk || binanceOk) ? 'none' : 'block';
     }
 }
 
@@ -797,7 +853,151 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ================================================================
-// 5. SISTEMA DE GUARDADO DE DATOS ENTRE PESTAÑAS (localStorage)
+// 5. PESTAÑA VUELTA SPOT → P2P
+// ================================================================
+
+window.actualizarPrecioSpotRetiro = function() {
+    return fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTARS')
+        .then(res => {
+            if (!res.ok) throw new Error('Error Binance API');
+            return res.json();
+        })
+        .then(data => {
+            const el = document.getElementById('sv_precioSpot');
+            if (el) el.value = parseFloat(data.price).toFixed(2);
+        })
+        .catch(err => {
+            console.error('Error precio Spot Retiro:', err);
+        });
+};
+
+window.calcularSpotRetiro = function() {
+    const precioSpotInput = document.getElementById('sv_precioSpot');
+    if (!precioSpotInput) return;
+
+    const precioSpot = parseFloat(precioSpotInput.value) || 0;
+    const precioCompraBybit = parseFloat(document.getElementById('sv_precioCompraBybit').value) || 0;
+    const precioCompraBinance = parseFloat(document.getElementById('sv_precioCompraBinance').value) || 0;
+    const usdtVender = parseFloat(document.getElementById('sv_usdtVender').value) || 0;
+
+    const COMISION_SPOT = 0.001;
+    const COMISION_RETIRO = 0.01;
+    const COMISION_P2P_BINANCE = 0.002;
+
+    // ARS después de vender en Spot
+    const arsBrutos = usdtVender * precioSpot;
+    const arsPostSpot = arsBrutos * (1 - COMISION_SPOT);
+    const arsPostRetiro = arsPostSpot * (1 - COMISION_RETIRO);
+
+    // Nota de break-even (precio máximo de recompra P2P para que la vuelta sea rentable)
+    const breakBybit = precioSpot * (1 - COMISION_SPOT) * (1 - COMISION_RETIRO);
+    const breakBinance = breakBybit / (1 + COMISION_P2P_BINANCE);
+    const diffBybit = precioSpot - breakBybit;
+    const diffBinance = precioSpot - breakBinance;
+    const notaEl = document.getElementById('sv_notaSpot');
+    if (notaEl && precioSpot > 0) {
+        notaEl.style.display = 'block';
+        document.getElementById('sv_breakBybit').textContent = breakBybit.toFixed(2);
+        document.getElementById('sv_diffBybit').textContent = diffBybit.toFixed(2);
+        document.getElementById('sv_breakBinance').textContent = breakBinance.toFixed(2);
+        document.getElementById('sv_diffBinance').textContent = diffBinance.toFixed(2);
+    }
+
+    // === Bybit P2P ===
+    const usdtBybit = precioCompraBybit > 0 ? arsPostRetiro / precioCompraBybit : 0;
+    const gananciaBybit = usdtBybit - usdtVender;
+    const pctBybit = usdtVender > 0 ? (gananciaBybit / usdtVender) * 100 : 0;
+
+    document.getElementById('sv_bybit_arsSpot').textContent = '$' + arsPostSpot.toLocaleString('es-AR', { maximumFractionDigits: 0 });
+    document.getElementById('sv_bybit_arsRetiro').textContent = '$' + arsPostRetiro.toLocaleString('es-AR', { maximumFractionDigits: 0 });
+    document.getElementById('sv_bybit_usdtFinal').textContent = usdtBybit.toFixed(2) + ' USDT';
+
+    const colorBybit = gananciaBybit >= 0 ? 'positive' : 'negative';
+    document.getElementById('sv_bybit_ganancia').textContent = (gananciaBybit >= 0 ? '+' : '') + gananciaBybit.toFixed(2) + ' USDT';
+    document.getElementById('sv_bybit_ganancia').className = 'value ' + colorBybit;
+
+    const bigBybit = document.getElementById('sv_bybit_resultBig');
+    bigBybit.style.display = 'block';
+    bigBybit.className = 'result-big result-' + colorBybit;
+    document.getElementById('sv_bybit_pct').textContent = (pctBybit >= 0 ? '+' : '') + pctBybit.toFixed(3) + '%';
+
+    // === Binance P2P ===
+    const precioBinanceFinal = precioCompraBinance > 0 ? precioCompraBinance * (1 + COMISION_P2P_BINANCE) : 0;
+    const usdtBinance = precioBinanceFinal > 0 ? arsPostRetiro / precioBinanceFinal : 0;
+    const gananciaBinance = usdtBinance - usdtVender;
+    const pctBinance = usdtVender > 0 ? (gananciaBinance / usdtVender) * 100 : 0;
+
+    document.getElementById('sv_binance_arsSpot').textContent = '$' + arsPostSpot.toLocaleString('es-AR', { maximumFractionDigits: 0 });
+    document.getElementById('sv_binance_arsRetiro').textContent = '$' + arsPostRetiro.toLocaleString('es-AR', { maximumFractionDigits: 0 });
+    document.getElementById('sv_binance_usdtFinal').textContent = usdtBinance.toFixed(2) + ' USDT';
+
+    const colorBinance = gananciaBinance >= 0 ? 'positive' : 'negative';
+    document.getElementById('sv_binance_ganancia').textContent = (gananciaBinance >= 0 ? '+' : '') + gananciaBinance.toFixed(2) + ' USDT';
+    document.getElementById('sv_binance_ganancia').className = 'value ' + colorBinance;
+
+    const bigBinance = document.getElementById('sv_binance_resultBig');
+    bigBinance.style.display = 'block';
+    bigBinance.className = 'result-big result-' + colorBinance;
+    document.getElementById('sv_binance_pct').textContent = (pctBinance >= 0 ? '+' : '') + pctBinance.toFixed(3) + '%';
+
+    // === TABLA ===
+    const montos = [
+        { usdt: 100,   key: '100' },
+        { usdt: 500,   key: '500' },
+        { usdt: 1000,  key: '1k' },
+        { usdt: 5000,  key: '5k' }
+    ];
+
+    montos.forEach(function(m) {
+        const arsM = m.usdt * precioSpot * (1 - COMISION_SPOT) * (1 - COMISION_RETIRO);
+
+        // Bybit
+        const uB = precioCompraBybit > 0 ? arsM / precioCompraBybit : 0;
+        const gB = uB - m.usdt;
+        const pB = m.usdt > 0 ? (gB / m.usdt) * 100 : 0;
+        const elB = document.getElementById('sv_row_' + m.key + '_bybit');
+        const elBP = document.getElementById('sv_row_' + m.key + '_bybit_pct');
+        if (elB) { elB.textContent = (gB >= 0 ? '+' : '') + gB.toFixed(2); elB.style.color = gB >= 0 ? '#00c897' : '#f05a5a'; }
+        if (elBP) { elBP.textContent = (pB >= 0 ? '+' : '') + pB.toFixed(3) + '%'; elBP.style.color = gB >= 0 ? '#00c897' : '#f05a5a'; }
+
+        // Binance
+        const uN = precioBinanceFinal > 0 ? arsM / precioBinanceFinal : 0;
+        const gN = uN - m.usdt;
+        const pN = m.usdt > 0 ? (gN / m.usdt) * 100 : 0;
+        const elN = document.getElementById('sv_row_' + m.key + '_binance');
+        const elNP = document.getElementById('sv_row_' + m.key + '_binance_pct');
+        if (elN) { elN.textContent = (gN >= 0 ? '+' : '') + gN.toFixed(2); elN.style.color = gN >= 0 ? '#00c897' : '#f05a5a'; }
+        if (elNP) { elNP.textContent = (pN >= 0 ? '+' : '') + pN.toFixed(3) + '%'; elNP.style.color = gN >= 0 ? '#00c897' : '#f05a5a'; }
+    });
+
+    // === BANNER GANADOR ===
+    const banner = document.getElementById('sv_winnerBanner');
+    const nameEl = document.getElementById('sv_winnerName');
+    const detailEl = document.getElementById('sv_winnerDetail');
+
+    if (usdtVender > 0 && (precioCompraBybit > 0 || precioCompraBinance > 0)) {
+        banner.style.display = 'block';
+
+        if (pctBybit > pctBinance + 0.001) {
+            banner.className = 'winner-banner winner-bybit';
+            nameEl.textContent = 'Bybit P2P — te da ' + gananciaBybit.toFixed(2) + ' USDT más';
+            detailEl.textContent = 'Bybit: ' + (pctBybit >= 0 ? '+' : '') + pctBybit.toFixed(3) + '%  ·  Binance: ' + (pctBinance >= 0 ? '+' : '') + pctBinance.toFixed(3) + '%  ·  Diferencia: +' + (pctBybit - pctBinance).toFixed(3) + '%';
+        } else if (pctBinance > pctBybit + 0.001) {
+            banner.className = 'winner-banner winner-binance';
+            nameEl.textContent = 'Binance P2P — te da ' + gananciaBinance.toFixed(2) + ' USDT más';
+            detailEl.textContent = 'Binance: ' + (pctBinance >= 0 ? '+' : '') + pctBinance.toFixed(3) + '%  ·  Bybit: ' + (pctBybit >= 0 ? '+' : '') + pctBybit.toFixed(3) + '%  ·  Diferencia: +' + (pctBinance - pctBybit).toFixed(3) + '%';
+        } else {
+            banner.className = 'winner-banner winner-empate';
+            nameEl.textContent = 'Empate — ambas opciones dan lo mismo';
+            detailEl.textContent = 'Diferencia despreciable entre ambas';
+        }
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
+// ================================================================
+// 6. SISTEMA DE GUARDADO DE DATOS ENTRE PESTAÑAS (localStorage)
 // ================================================================
 
 // Función para guardar el valor de un input en localStorage
