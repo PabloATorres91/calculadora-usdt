@@ -57,7 +57,8 @@ async function cargarPagina(rutaHtml) {
                 const inputsP2P = [
                     'p2p_capital',
                     'p2p_precioVentaBybit', 'p2p_precioBrutoBinance',
-                    'p2p_precioVentaBinance', 'p2p_precioBrutoBybit'
+                    'p2p_precioVentaBinance', 'p2p_precioBrutoBybit',
+                    'p2p_arsRecompra1', 'p2p_arsRecompra2'
                 ];
                 restaurarPestana(inputsP2P);
                 agregarEventosAInputs(inputsP2P, window.calcularP2PBB);
@@ -126,6 +127,9 @@ function agregarEventosAInputs(listaIds, funcionCallback) {
                 el.addEventListener('keydown', function(e) { 
                     if (e.key === 'Enter') { 
                         e.preventDefault(); 
+                        if (!isNaN(evaluarExpresion(this.value))) {
+                            this.value = evaluarExpresion(this.value);
+                        }
                         funcionCallback(); 
                     } 
                 });
@@ -493,6 +497,16 @@ window.calcularCiclo = function() {
 // 4. PESTAÑA P2P BYBIT - BINANCE (COMPARACIÓN LADO A LADO)
 // ================================================================
 
+function evaluarExpresion(str) {
+    if (!str || typeof str !== 'string') return NaN;
+    str = str.replace(/\s/g, '');
+    if (!/^[0-9+\-*/().]+$/.test(str)) return NaN;
+    try {
+        const result = Function('"use strict"; return (' + str + ')')();
+        return (typeof result === 'number' && isFinite(result)) ? result : NaN;
+    } catch(e) { return NaN; }
+}
+
 window.calcularP2PBB = function() {
     const precioVentaBybitInput = document.getElementById('p2p_precioVentaBybit');
     if (!precioVentaBybitInput) return;
@@ -536,6 +550,26 @@ window.calcularP2PBB = function() {
         const elPct = document.getElementById('p2p_info2_pct');
         elPct.textContent = (gananciaPct2 >= 0 ? '+' : '') + gananciaPct2.toFixed(3) + '%';
         elPct.style.color = gananciaPct2 >= 0 ? '#00c897' : '#f05a5a';
+    }
+
+    // USDT comprable con ARS para recompra
+    const arsRecompraRaw1 = document.getElementById('p2p_arsRecompra1').value;
+    const arsRecompraRaw2 = document.getElementById('p2p_arsRecompra2').value;
+    const arsRecompra1 = evaluarExpresion(arsRecompraRaw1) || 0;
+    const arsRecompra2 = evaluarExpresion(arsRecompraRaw2) || 0;
+
+    if (arsRecompra1 > 0 && precioBrutoBinance > 0) {
+        const usdtComprable = arsRecompra1 / precioBrutoBinance;
+        document.getElementById('p2p_usdtComprable1').textContent = usdtComprable.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+        document.getElementById('p2p_usdtComprable1').textContent = '—';
+    }
+
+    if (arsRecompra2 > 0 && precioBrutoBybit > 0) {
+        const usdtComprable = arsRecompra2 / precioBrutoBybit;
+        document.getElementById('p2p_usdtComprable2').textContent = usdtComprable.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+        document.getElementById('p2p_usdtComprable2').textContent = '—';
     }
 
     let ganPctS1_2m = 0;

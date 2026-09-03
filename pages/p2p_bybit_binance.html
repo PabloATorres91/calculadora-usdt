@@ -14,6 +14,16 @@
                 <label>Precio Compra Binance <small>ARS / USDT (bruto)</small></label>
                 <input type="number" id="p2p_precioBrutoBinance" placeholder="1500" step="any" />
             </div>
+            <div class="input-group">
+                <label>ARS para recompra</label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="text" id="p2p_arsRecompra1" placeholder="Ej: 1500000" inputmode="decimal" />
+                </div>
+            </div>
+            <div id="p2p_usdtResult1" style="margin-top: 6px; font-size: 14px; color: #8899b0; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+                Podés comprar <strong id="p2p_usdtComprable1" style="color: #3b82f6;">—</strong> USDT
+            </div>
             <div id="p2p_info1" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
                 <span style="color: #f0b90b; font-weight: 600;">Bybit:</span> vendés a $<span id="p2p_info1_venta">0</span> ·
                 <span style="color: #3b82f6; font-weight: 600;">Binance:</span> comprás final (c/ 0.2%) a $<span id="p2p_info1_compra">0</span> → <span id="p2p_info1_pct" style="font-weight: 700;">+0.00%</span>
@@ -30,6 +40,16 @@
             <div class="input-group">
                 <label>Precio Compra Bybit <small>ARS / USDT</small></label>
                 <input type="number" id="p2p_precioBrutoBybit" placeholder="1500" step="any" />
+            </div>
+            <div class="input-group">
+                <label>ARS para recompra</label>
+                <div class="input-wrap">
+                    <span class="prefix">$</span>
+                    <input type="text" id="p2p_arsRecompra2" placeholder="Ej: 1500000" inputmode="decimal" />
+                </div>
+            </div>
+            <div id="p2p_usdtResult2" style="margin-top: 6px; font-size: 14px; color: #8899b0; padding: 8px 10px; background: #10171f; border-radius: 8px;">
+                Podés comprar <strong id="p2p_usdtComprable2" style="color: #f0b90b;">—</strong> USDT
             </div>
             <div id="p2p_info2" style="display:none; font-size: 13px; color: #8899b0; margin-top: 6px; padding: 8px 10px; background: #10171f; border-radius: 8px;">
                 <span style="color: #3b82f6; font-weight: 600;">Binance:</span> vendés final (c/ 0.2%) a $<span id="p2p_info2_venta">0</span> ·
