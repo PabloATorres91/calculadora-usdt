@@ -17,10 +17,16 @@
             <div class="subtitle" style="border-bottom: none; padding-bottom: 0; margin-top: 5px; text-align: left;">Operaciones de compra/venta con pesos argentinos</div>
         </div>
         
-        <!-- CHECKBOX A LA DERECHA -->
-        <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6a7e99;">
-            <input type="checkbox" id="checkMostrarKraken" checked onchange="toggleKraken()">
-            <label for="checkMostrarKraken">Mostrar Kraken</label>
+        <!-- CHECKBOXES A LA DERECHA -->
+        <div style="display: flex; align-items: center; gap: 16px; font-size: 14px; color: #6a7e99;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="checkComisionP2P" checked onchange="toggleComisionP2P()">
+                <label for="checkComisionP2P" title="Comisión P2P Binance verificada: 0,16% (si está desmarcado usa 0,20%)">✓ P2P Binance verificado</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="checkMostrarKraken" checked onchange="toggleKraken()">
+                <label for="checkMostrarKraken">Mostrar Kraken</label>
+            </div>
         </div>
     </div>
 

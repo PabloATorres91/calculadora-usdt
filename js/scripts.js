@@ -108,6 +108,17 @@ async function cargarPagina(rutaHtml) {
                 });
             }
 
+            // Mapear función de cálculo de la pestaña actual (para recomputar al cambiar comisión)
+            if (rutaHtml.includes('spread.html')) window.computeActual = window.calcularSpread;
+            else if (rutaHtml.includes('fiwind.html')) window.computeActual = window.calcularFiwind;
+            else if (rutaHtml.includes('p2p_bybit_binance.html')) window.computeActual = window.calcularP2PBB;
+            else if (rutaHtml.includes('kraken.html')) window.computeActual = window.calcularCiclo;
+            else if (rutaHtml.includes('binance_spot.html')) window.computeActual = window.calcularBinanceSpot;
+            else if (rutaHtml.includes('spot_retiro.html')) window.computeActual = window.calcularSpotRetiro;
+
+            // Actualizar textos de comisión (etiquetas que muestran el % según el check)
+            actualizarTextosComision();
+
             // ... (código siguiente) ...
         })
         .catch(error => {
@@ -198,6 +209,47 @@ document.addEventListener('click', function(e) {
         e.target.classList.add('active');
     }
 });
+
+// ================================================================
+// 1.5 COMISIÓN P2P BINANCE GLOBAL ("¿Verificado?")
+// Verificado = 0.16% · No verificado = 0.20% (valor previo)
+// ================================================================
+let comisionP2PVerificada = true;
+
+function getComisionP2PBinance() {
+    return comisionP2PVerificada ? 0.0016 : 0.002;
+}
+
+function formatoPctComision(comision) {
+    return (comision * 100).toFixed(2).replace('.', ',') + '%';
+}
+
+function actualizarTextosComision() {
+    const comision = getComisionP2PBinance();
+    const pct = formatoPctComision(comision);
+    const multBaja = (1 - comision).toFixed(4);
+    const multAlta = (1 + comision).toFixed(4);
+    const textoToggles = [
+        ['p2p_info1_fee', pct],
+        ['p2p_info2_fee', pct],
+        ['fiwind_binance_fee', pct],
+        ['p2p_info1_mult', multAlta],
+        ['p2p_info2_mult', multBaja]
+    ];
+    textoToggles.forEach(function(par) {
+        const el = document.getElementById(par[0]);
+        if (el) el.textContent = par[1];
+    });
+}
+
+function toggleComisionP2P() {
+    const cb = document.getElementById('checkComisionP2P');
+    if (!cb) return;
+    comisionP2PVerificada = cb.checked;
+    localStorage.setItem('comisionP2PVerificada', comisionP2PVerificada);
+    actualizarTextosComision();
+    if (window.computeActual) window.computeActual();
+}
 
 // Cargar la primera pestaña por defecto al abrir la página (Spread)
 window.onload = function() {
@@ -339,10 +391,10 @@ window.calcularFiwind = function() {
         if (bybitCapitalBlock) bybitCapitalBlock.style.display = 'none';
     }
 
-    // --- Binance (0.2% fee en venta) ---
+    // --- Binance (fee P2P en venta) ---
     const binanceResult = document.getElementById('fiwind_binanceResult');
     const binanceCapitalBlock = document.getElementById('fiwind_capitalBinance');
-    const COMISION_BINANCE = 0.002;
+    const COMISION_BINANCE = getComisionP2PBinance();
     if (!isNaN(myPriceBinanceVal) && myPriceBinanceVal > 0) {
         if (binanceResult) binanceResult.style.display = 'block';
         if (hintEl) hintEl.style.display = 'none';
@@ -515,7 +567,7 @@ window.calcularP2PBB = function() {
     const precioBrutoBinance = parseFloat(document.getElementById('p2p_precioBrutoBinance').value) || 0;
     const precioVentaBinance = parseFloat(document.getElementById('p2p_precioVentaBinance').value) || 0;
     const precioBrutoBybit = parseFloat(document.getElementById('p2p_precioBrutoBybit').value) || 0;
-    const comisionBinance = 0.002;
+    const comisionBinance = getComisionP2PBinance();
 
     const precioRealBinance1 = precioBrutoBinance * (1 + comisionBinance);
     const precioRealBinance2 = precioVentaBinance * (1 - comisionBinance);
@@ -626,7 +678,7 @@ window.calcularP2PBB = function() {
     const gananciaPctARS1 = capital > 0 ? (gananciaARS1 / capital) * 100 : 0;
     const gananciaPctUSDT1 = usdtVendidos1 > 0 ? (gananciaUSDT1 / usdtVendidos1) * 100 : 0;
     const spreadReal1 = gananciaPctUSDT1;
-    const precioSugerido1 = precioVentaBybit / (1 + 0.002) / (1 + comisionBinance);
+    const precioSugerido1 = precioVentaBybit / (1 + comisionBinance) / (1 + comisionBinance);
 
     document.getElementById('resultadosSub1').style.display = 'block';
     document.getElementById('p2p_usdtVendidos').textContent = usdtVendidos1.toFixed(2);
@@ -645,7 +697,7 @@ window.calcularP2PBB = function() {
     document.getElementById('p2p_gananciaPctUSDT1').className = 'value ' + color1;
     document.getElementById('p2p_sugerenciaTexto1').textContent = '$' + precioSugerido1.toFixed(2);
     document.getElementById('p2p_formulaTexto1').textContent =
-        '$' + precioVentaBybit.toFixed(2) + ' ÷ 1.0020 ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido1.toFixed(2);
+        '$' + precioVentaBybit.toFixed(2) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido1.toFixed(2);
 
     // Estrategia 2: Binance Venta → Bybit Compra
     const arsNetos2 = capital * (1 - comisionBinance);
@@ -656,7 +708,7 @@ window.calcularP2PBB = function() {
     const gananciaPctARS2 = capital > 0 ? (gananciaARS2 / capital) * 100 : 0;
     const gananciaPctUSDT2 = usdtVendidos2 > 0 ? (gananciaUSDT2 / usdtVendidos2) * 100 : 0;
     const spreadReal2 = gananciaPctUSDT2;
-    const precioSugerido2 = precioVentaBinance * (1 - comisionBinance) / (1 + 0.002);
+    const precioSugerido2 = precioVentaBinance * (1 - comisionBinance) / (1 + comisionBinance);
 
     document.getElementById('resultadosSub2').style.display = 'block';
     document.getElementById('p2p_usdtVendidos2').textContent = usdtVendidos2.toFixed(2);
@@ -675,7 +727,7 @@ window.calcularP2PBB = function() {
     document.getElementById('p2p_gananciaPctUSDT2').className = 'value ' + color2;
     document.getElementById('p2p_sugerenciaTexto2').textContent = '$' + precioSugerido2.toFixed(2);
     document.getElementById('p2p_formulaTexto2').textContent =
-        '$' + precioVentaBinance.toFixed(2) + ' × ' + (1 - comisionBinance).toFixed(4) + ' ÷ 1.0020 = $' + precioSugerido2.toFixed(2);
+        '$' + precioVentaBinance.toFixed(2) + ' × ' + (1 - comisionBinance).toFixed(4) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido2.toFixed(2);
 
     // BANNER GANADOR
     const banner = document.getElementById('winnerBanner');
@@ -714,7 +766,7 @@ window.calcularBinanceSpot = function() {
     const precioSpot = parseFloat(precioSpotInput.value) || 0;
     const precioVentaBybit = parseFloat(document.getElementById('bs_precioVentaBybit').value) || 0;
     const precioVentaBinance = parseFloat(document.getElementById('bs_precioVentaBinance').value) || 0;
-    const comisionBinanceP2P = 0.002;
+    const comisionBinanceP2P = getComisionP2PBinance();
     const comisionSpot = 0.001;
     const precioSpotEfectivo = precioSpot * (1 + comisionSpot);
 
@@ -874,6 +926,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkbox = document.getElementById('checkMostrarKraken');
     const btnKraken = document.getElementById('btnKraken');
 
+    // Comisión P2P Binance verificada (por defecto: verificado = 0.16%)
+    const comisionGuardada = localStorage.getItem('comisionP2PVerificada');
+    if (comisionGuardada === 'false') comisionP2PVerificada = false;
+    const cbComision = document.getElementById('checkComisionP2P');
+    if (cbComision) cbComision.checked = comisionP2PVerificada;
+
     // Leer lo que guardamos antes (si existe). Si no existe, por defecto es true (mostrar).
     const recordar = localStorage.getItem('mostrarKraken');
     
@@ -916,7 +974,7 @@ window.calcularSpotRetiro = function() {
 
     const COMISION_SPOT = 0.001;
     const COMISION_RETIRO = 0.01;
-    const COMISION_P2P_BINANCE = 0.002;
+    const COMISION_P2P_BINANCE = getComisionP2PBinance();
 
     // ARS después de vender en Spot
     const arsBrutos = usdtVender * precioSpot;
