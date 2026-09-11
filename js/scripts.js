@@ -678,7 +678,7 @@ window.calcularP2PBB = function() {
     const gananciaPctARS1 = capital > 0 ? (gananciaARS1 / capital) * 100 : 0;
     const gananciaPctUSDT1 = usdtVendidos1 > 0 ? (gananciaUSDT1 / usdtVendidos1) * 100 : 0;
     const spreadReal1 = gananciaPctUSDT1;
-    const precioSugerido1 = precioVentaBybit / (1 + comisionBinance) / (1 + comisionBinance);
+    const precioSugerido1 = precioVentaBybit / (1 + comisionBinance);
 
     document.getElementById('resultadosSub1').style.display = 'block';
     document.getElementById('p2p_usdtVendidos').textContent = usdtVendidos1.toFixed(2);
@@ -697,7 +697,7 @@ window.calcularP2PBB = function() {
     document.getElementById('p2p_gananciaPctUSDT1').className = 'value ' + color1;
     document.getElementById('p2p_sugerenciaTexto1').textContent = '$' + precioSugerido1.toFixed(2);
     document.getElementById('p2p_formulaTexto1').textContent =
-        '$' + precioVentaBybit.toFixed(2) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido1.toFixed(2);
+        '$' + precioVentaBybit.toFixed(2) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido1.toFixed(2);
 
     // Estrategia 2: Binance Venta → Bybit Compra
     const arsNetos2 = capital * (1 - comisionBinance);
@@ -708,7 +708,7 @@ window.calcularP2PBB = function() {
     const gananciaPctARS2 = capital > 0 ? (gananciaARS2 / capital) * 100 : 0;
     const gananciaPctUSDT2 = usdtVendidos2 > 0 ? (gananciaUSDT2 / usdtVendidos2) * 100 : 0;
     const spreadReal2 = gananciaPctUSDT2;
-    const precioSugerido2 = precioVentaBinance * (1 - comisionBinance) / (1 + comisionBinance);
+    const precioSugerido2 = precioVentaBinance * (1 - comisionBinance);
 
     document.getElementById('resultadosSub2').style.display = 'block';
     document.getElementById('p2p_usdtVendidos2').textContent = usdtVendidos2.toFixed(2);
@@ -727,7 +727,7 @@ window.calcularP2PBB = function() {
     document.getElementById('p2p_gananciaPctUSDT2').className = 'value ' + color2;
     document.getElementById('p2p_sugerenciaTexto2').textContent = '$' + precioSugerido2.toFixed(2);
     document.getElementById('p2p_formulaTexto2').textContent =
-        '$' + precioVentaBinance.toFixed(2) + ' × ' + (1 - comisionBinance).toFixed(4) + ' ÷ ' + (1 + comisionBinance).toFixed(4) + ' = $' + precioSugerido2.toFixed(2);
+        '$' + precioVentaBinance.toFixed(2) + ' × ' + (1 - comisionBinance).toFixed(4) + ' = $' + precioSugerido2.toFixed(2);
 
     // BANNER GANADOR
     const banner = document.getElementById('winnerBanner');
