@@ -1,0 +1,92 @@
+<div id="tabBinanceP2P" class="tab-content" style="display:block;">
+    <div class="section">
+        <h2>📥 Sección 1 · Datos de operación <span>venta / recompra · Binance P2P</span></h2>
+        <div style="margin-bottom: 18px; border-bottom: 1px solid #2a3442; padding-bottom: 12px;">
+            <div style="font-size: 14px; color: #8899b0; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <span style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+                Venta de USDT
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Precio venta USDT <small>ARS / USDT</small></label>
+                    <input type="number" id="bp_precioVenta" placeholder="Ej: 1592" step="any" value="" />
+                </div>
+                <div class="input-group">
+                    <label>ARS recibidos <small>por la venta</small></label>
+                    <input type="text" id="bp_arsRecibidos" placeholder="Ej: 100000+200000+300000" inputmode="decimal" value="" />
+                </div>
+                <div class="input-group">
+                    <label>USDT vendidos <small>calculado</small></label>
+                    <input type="number" id="bp_cantidadVenta" disabled value="0" step="any" />
+                </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 13px; color: #8899b0;">
+                💡 Precio venta efectivo (c/ comisión <span id="bp_feeVenta">0,16%</span>): venta × <span id="bp_multVenta">0.9984</span> = $<strong id="bp_precioVentaNeto" style="color: #00c897;">0.00</strong>
+            </div>
+        </div>
+        <div>
+            <div style="font-size: 14px; color: #8899b0; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <span style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+                Recompra de USDT
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Precio compra USDT <small>ARS / USDT</small></label>
+                    <input type="number" id="bp_precioCompra" placeholder="Ej: 1580" step="any" value="" />
+                </div>
+                <div class="input-group">
+                    <label>ARS para recompra <small>invertidos</small></label>
+                    <input type="text" id="bp_arsRecompra" placeholder="Ej: 100000+200000+300000" inputmode="decimal" />
+                </div>
+                <div class="input-group">
+                    <label>USDT comprados <small>calculado</small></label>
+                    <input type="number" id="bp_cantidadCompra" disabled value="0" step="any" />
+                </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 13px; color: #8899b0;">
+                💡 Precio compra efectivo (c/ comisión <span id="bp_feeCompra">0,16%</span>): compra × <span id="bp_multCompra">1.0016</span> = $<strong id="bp_precioCompraReal" style="color: #f0b90b;">0.00</strong>
+            </div>
+        </div>
+        <div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn" onclick="window.calcularBinanceP2P()">⟳ Actualizar</button>
+            <button class="btn-secondary" onclick="window.resetBinanceP2P()">↺ Restaurar</button>
+        </div>
+    </div>
+    <div class="result-section" id="resultadosBinanceP2P">
+        <h2>📊 Sección 2 · Resultados</h2>
+        <div class="result-grid">
+            <div class="result-item">
+                <div class="label">Spread / Ganancia</div>
+                <div class="value" id="bp_gananciaPorcentaje">+0.00%</div>
+            </div>
+            <div class="result-item">
+                <div class="label">USDT ganados (neto)</div>
+                <div class="value" id="bp_gananciaUSDT">+0.00 USDT</div>
+            </div>
+            <div class="result-item">
+                <div class="label">Ganancia en ARS</div>
+                <div class="value" id="bp_gananciaARS">+$0.00</div>
+            </div>
+            <div class="result-item">
+                <div class="label">USDT RECOMPRADOS</div>
+                <div class="value neutral" id="bp_usdtOperados">0.00</div>
+            </div>
+        </div>
+        <div class="detail-box" id="bp_detalleOperacion">
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #3b82f6;">📌</span>
+                    <span><strong>Recompra:</strong> <span id="bp_detComprados">0.00</span> USDT a $<span id="bp_detPrecioCompra">0.00</span> ARS efectivo</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #3b82f6;">📌</span>
+                    <span><strong>Venta:</strong> Vendidos a $<span id="bp_detPrecioVenta">0.00</span> ARS efectivo</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #3b82f6;">📌</span>
+                    <span id="bp_detGananciaTexto">Sin ganancia calculada aún</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

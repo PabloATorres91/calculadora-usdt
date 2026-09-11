@@ -39,7 +39,22 @@ async function cargarPagina(rutaHtml) {
                 });
                 agregarSyncBybit('precioVenta');
                 agregarSyncCompra('precioCompra');
+                agregarSyncCampoPar('arsRecibidos', SYNC_ARS_SPREAD_IDS);
+                agregarSyncCampoPar('arsRecompra', SYNC_ARS_SPREAD_IDS);
                 setTimeout(window.calcularSpread, 100);
+            } else if (rutaHtml.includes('binance_p2p.html') && typeof window.calcularBinanceP2P === 'function') {
+                const inputsBP = ['bp_precioVenta', 'bp_arsRecibidos', 'bp_precioCompra', 'bp_arsRecompra'];
+                restaurarPestana(inputsBP);
+                agregarEventosAInputs(inputsBP, window.calcularBinanceP2P);
+                inputsBP.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => guardarInput(id));
+                });
+                agregarSyncBinanceVenta('bp_precioVenta');
+                agregarSyncBinanceCompra('bp_precioCompra');
+                agregarSyncCampoPar('bp_arsRecibidos', SYNC_ARS_BINANCE_IDS);
+                agregarSyncCampoPar('bp_arsRecompra', SYNC_ARS_BINANCE_IDS);
+                setTimeout(window.calcularBinanceP2P, 100);
             } else if (rutaHtml.includes('fiwind.html') && typeof window.calcularFiwind === 'function') {
                 const inputsFiwind = ['usdPrice', 'usdtRate', 'myPrice', 'myPriceBinance', 'capitalArs'];
                 restaurarPestana(inputsFiwind);
@@ -49,6 +64,7 @@ async function cargarPagina(rutaHtml) {
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
                 agregarSyncBybit('myPrice');
+                agregarSyncBinanceVenta('myPriceBinance');
                 (async () => {
                     await window.actualizarPreciosFiwind();
                     setTimeout(window.calcularFiwind, 100);
@@ -68,6 +84,8 @@ async function cargarPagina(rutaHtml) {
                 });
                 agregarSyncBybit('p2p_precioVentaBybit');
                 agregarSyncCompra('p2p_precioBrutoBybit');
+                agregarSyncBinanceVenta('p2p_precioVentaBinance');
+                agregarSyncBinanceCompra('p2p_precioBrutoBinance');
                 setTimeout(window.calcularP2PBB, 100);
             } else if (rutaHtml.includes('kraken.html') && typeof window.calcularCiclo === 'function') {
                 const inputsKraken = ['c3_usdtVendido', 'c3_arsRecibidos', 'c3_tasaCompraUsd', 'c3_tasaFiwind', 'c3_tasaUsdtUsdc', 'c3_tasaKraken'];
@@ -87,6 +105,7 @@ async function cargarPagina(rutaHtml) {
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
                 agregarSyncBybit('bs_precioVentaBybit');
+                agregarSyncBinanceVenta('bs_precioVentaBinance');
                 window.actualizarPrecioSpotBinance().then(() => {
                     setTimeout(window.calcularBinanceSpot, 100);
                 }).catch(() => {
@@ -101,6 +120,7 @@ async function cargarPagina(rutaHtml) {
                     if(el) el.addEventListener('input', () => guardarInput(id));
                 });
                 agregarSyncCompra('sv_precioCompraBybit');
+                agregarSyncBinanceCompra('sv_precioCompraBinance');
                 window.actualizarPrecioSpotRetiro().then(() => {
                     setTimeout(window.calcularSpotRetiro, 100);
                 }).catch(() => {
@@ -110,6 +130,7 @@ async function cargarPagina(rutaHtml) {
 
             // Mapear función de cálculo de la pestaña actual (para recomputar al cambiar comisión)
             if (rutaHtml.includes('spread.html')) window.computeActual = window.calcularSpread;
+            else if (rutaHtml.includes('binance_p2p.html')) window.computeActual = window.calcularBinanceP2P;
             else if (rutaHtml.includes('fiwind.html')) window.computeActual = window.calcularFiwind;
             else if (rutaHtml.includes('p2p_bybit_binance.html')) window.computeActual = window.calcularP2PBB;
             else if (rutaHtml.includes('kraken.html')) window.computeActual = window.calcularCiclo;
@@ -202,6 +223,84 @@ function agregarSyncCompra(inputId) {
     el.addEventListener('change', function() { syncCompraPrecio(inputId); });
 }
 
+// Sincronizar precios de VENTA Binance P2P entre pestañas
+const SYNC_BINANCE_VENTA_IDS = ['bp_precioVenta', 'p2p_precioVentaBinance', 'bs_precioVentaBinance', 'myPriceBinance'];
+function syncBinanceVentaPrecio(sourceId) {
+    const sourceEl = document.getElementById(sourceId);
+    if (!sourceEl) return;
+    const val = sourceEl.value;
+    SYNC_BINANCE_VENTA_IDS.forEach(function(id) {
+        localStorage.setItem(id, val);
+        const el = document.getElementById(id);
+        if (el && el.value !== val) {
+            el.value = val;
+        }
+    });
+}
+
+// Sincronizar precios de COMPRA Binance P2P entre pestañas
+const SYNC_BINANCE_COMPRA_IDS = ['bp_precioCompra', 'p2p_precioBrutoBinance', 'sv_precioCompraBinance'];
+function syncBinanceCompraPrecio(sourceId) {
+    const sourceEl = document.getElementById(sourceId);
+    if (!sourceEl) return;
+    const val = sourceEl.value;
+    SYNC_BINANCE_COMPRA_IDS.forEach(function(id) {
+        localStorage.setItem(id, val);
+        const el = document.getElementById(id);
+        if (el && el.value !== val) {
+            el.value = val;
+        }
+    });
+}
+
+function agregarSyncBinanceVenta(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el || el.dataset.syncBinanceVentaAdded) return;
+    el.dataset.syncBinanceVentaAdded = 'true';
+    el.addEventListener('input', function() { syncBinanceVentaPrecio(inputId); });
+    el.addEventListener('blur', function() { syncBinanceVentaPrecio(inputId); });
+    el.addEventListener('change', function() { syncBinanceVentaPrecio(inputId); });
+}
+
+function agregarSyncBinanceCompra(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el || el.dataset.syncBinanceCompraAdded) return;
+    el.dataset.syncBinanceCompraAdded = 'true';
+    el.addEventListener('input', function() { syncBinanceCompraPrecio(inputId); });
+    el.addEventListener('blur', function() { syncBinanceCompraPrecio(inputId); });
+    el.addEventListener('change', function() { syncBinanceCompraPrecio(inputId); });
+}
+
+// Replicar campos ARS entre sí (pares de ids), ambas direcciones
+function syncCampoPar(sourceId, idsPar) {
+    const sourceEl = document.getElementById(sourceId);
+    if (!sourceEl) return;
+    const val = sourceEl.value;
+    idsPar.forEach(function(id) {
+        localStorage.setItem(id, val);
+        const el = document.getElementById(id);
+        if (el && el.value !== val) {
+            el.value = val;
+        }
+    });
+}
+
+function agregarSyncCampoPar(inputId, idsPar) {
+    const el = document.getElementById(inputId);
+    const flag = 'syncPar_' + idsPar.join('_');
+    if (!el || el.dataset[flag]) return;
+    el.dataset[flag] = 'true';
+    el.addEventListener('input', function() { syncCampoPar(inputId, idsPar); });
+    el.addEventListener('blur', function() { syncCampoPar(inputId, idsPar); });
+    el.addEventListener('change', function() { syncCampoPar(inputId, idsPar); });
+    // Replicar también el total evaluado al presionar Enter (keyup después del keydown de evaluarExpresion)
+    el.addEventListener('keyup', function() { syncCampoPar(inputId, idsPar); });
+}
+
+// Pares de campos ARS a espejar
+const SYNC_ARS_BINANCE_IDS = ['bp_arsRecibidos', 'bp_arsRecompra'];
+const SYNC_ARS_SPREAD_IDS = ['arsRecibidos', 'arsRecompra'];
+
 // Activar la clase 'active' en las pestañas al hacer clic
 document.addEventListener('click', function(e) {
     if(e.target.classList.contains('tab')) {
@@ -233,8 +332,12 @@ function actualizarTextosComision() {
         ['p2p_info1_fee', pct],
         ['p2p_info2_fee', pct],
         ['fiwind_binance_fee', pct],
+        ['bp_feeVenta', pct],
+        ['bp_feeCompra', pct],
         ['p2p_info1_mult', multAlta],
-        ['p2p_info2_mult', multBaja]
+        ['p2p_info2_mult', multBaja],
+        ['bp_multVenta', multBaja],
+        ['bp_multCompra', multAlta]
     ];
     textoToggles.forEach(function(par) {
         const el = document.getElementById(par[0]);
@@ -265,21 +368,13 @@ window.calcularSpread = function() {
     const precioVentaInput = document.getElementById('precioVenta');
     if(!precioVentaInput) return;
 
-    // Leer valores
+    // Leer valores (ARS con sumas: ej 100000+200000+300000)
     const precioVenta = parseFloat(precioVentaInput.value) || 0;
-    const arsRecibidos = parseFloat(document.getElementById('arsRecibidos').value) || 0;
+    const arsRecibidos = evaluarExpresion(document.getElementById('arsRecibidos').value) || 0;
     const precioCompra = parseFloat(document.getElementById('precioCompra').value) || 0;
     
-    // Obtener el input de recompra
-    const arsRecompraInput = document.getElementById('arsRecompra');
-    let arsRecompra = parseFloat(arsRecompraInput.value) || 0;
-
-    // Lógica clave: Si ARS Recibidos tiene un valor válido, forzamos a que Recompra tome el mismo valor
-    // (Esto evita que se quede con el 575000 de ejemplo si el usuario no lo borró)
-    if (arsRecibidos > 0) {
-        arsRecompra = arsRecibidos;
-        arsRecompraInput.value = arsRecibidos; // Actualizamos el valor visual del input
-    }
+    // ARS para recompra: se espeja con ARS recibidos, acepta sumas
+    const arsRecompra = evaluarExpresion(document.getElementById('arsRecompra').value) || 0;
 
     let cantidadCompra = 0;
     if (precioCompra > 0) cantidadCompra = arsRecompra / precioCompra;
@@ -324,6 +419,89 @@ window.calcularSpread = function() {
     }
     document.getElementById('detGananciaTexto').innerHTML = detalleHTML;
 }
+
+window.resetSpread = function() {
+    ['precioVenta', 'arsRecibidos', 'precioCompra', 'arsRecompra'].forEach(function(id) {
+        localStorage.removeItem(id);
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    window.calcularSpread();
+};
+
+// --- PESTAÑA BINANCE P2P (binance_p2p.html) ---
+// Igual que la de Bybit P2P pero con la comisión de Binance aplicada a venta y compra.
+window.calcularBinanceP2P = function() {
+    const precioVentaInput = document.getElementById('bp_precioVenta');
+    if (!precioVentaInput) return;
+
+    const comision = getComisionP2PBinance();
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    // ARS recibidos: acepta sumas de ventas (ej: 100000+200000+300000)
+    const arsRecibidos = evaluarExpresion(document.getElementById('bp_arsRecibidos').value) || 0;
+    const precioCompra = parseFloat(document.getElementById('bp_precioCompra').value) || 0;
+
+    // ARS para recompra: acepta sumas de billeteras (ej: 100000+200000+300000)
+    const arsRecompraInput = document.getElementById('bp_arsRecompra');
+    const arsRecompra = evaluarExpresion(arsRecompraInput.value) || 0;
+
+    // Efectivos con comisión Binance (venta neta ×(1-c) · compra real ×(1+c))
+    const precioVentaNeto = precioVenta * (1 - comision);
+    const precioCompraReal = precioCompra * (1 + comision);
+
+    document.getElementById('bp_precioVentaNeto').textContent = precioVentaNeto.toFixed(2);
+    document.getElementById('bp_precioCompraReal').textContent = precioCompraReal.toFixed(2);
+
+    const cantidadVenta = precioVentaNeto > 0 ? arsRecibidos / precioVentaNeto : 0;
+    const cantidadCompra = precioCompraReal > 0 ? arsRecompra / precioCompraReal : 0;
+
+    const arsObtenidos = cantidadCompra * precioVentaNeto;
+    const gananciaARS = arsObtenidos - arsRecompra;
+    let gananciaUSDT = 0;
+    if (precioVentaNeto > 0) gananciaUSDT = gananciaARS / precioVentaNeto;
+
+    let gananciaPorcentaje = 0;
+    if (arsRecompra > 0) gananciaPorcentaje = (gananciaARS / arsRecompra) * 100;
+
+    document.getElementById('bp_cantidadVenta').value = cantidadVenta.toFixed(6);
+    document.getElementById('bp_cantidadCompra').value = cantidadCompra.toFixed(6);
+
+    const signo = (gananciaUSDT >= 0) ? '+' : '';
+    const colorClass = (gananciaUSDT > 0.000001) ? 'positive' : (gananciaUSDT < -0.000001 ? 'negative' : 'neutral');
+
+    document.getElementById('bp_gananciaPorcentaje').textContent = `${signo}${gananciaPorcentaje.toFixed(3)}%`;
+    document.getElementById('bp_gananciaPorcentaje').className = `value ${colorClass}`;
+    document.getElementById('bp_gananciaUSDT').textContent = `${signo}${gananciaUSDT.toFixed(2)} USDT`;
+    document.getElementById('bp_gananciaUSDT').className = `value ${colorClass}`;
+    const signoARS = (gananciaARS >= 0) ? '+' : '';
+    document.getElementById('bp_gananciaARS').textContent = `${signoARS}$${gananciaARS.toFixed(2)}`;
+    document.getElementById('bp_gananciaARS').className = `value ${colorClass}`;
+
+    document.getElementById('bp_usdtOperados').textContent = cantidadCompra.toFixed(2);
+
+    document.getElementById('bp_detComprados').textContent = cantidadCompra.toFixed(2);
+    document.getElementById('bp_detPrecioCompra').textContent = `${precioCompraReal.toFixed(2)}`;
+    document.getElementById('bp_detPrecioVenta').textContent = `${precioVentaNeto.toFixed(2)}`;
+
+    let detalleHTML = '';
+    if (gananciaUSDT > 0.000001) {
+        detalleHTML = `✅ <span class="highlight-green">Ganaste +${gananciaUSDT.toFixed(2)} USDT</span> (${signo}${gananciaPorcentaje.toFixed(3)}% de spread). 🎯`;
+    } else if (gananciaUSDT < -0.000001) {
+        detalleHTML = `⚠️ <span class="highlight-red">Perdiste ${gananciaUSDT.toFixed(2)} USDT</span> (${gananciaPorcentaje.toFixed(3)}% de spread).`;
+    } else {
+        detalleHTML = `⚖️ Operación en equilibrio. Sin ganancia ni pérdida.`;
+    }
+    document.getElementById('bp_detGananciaTexto').innerHTML = detalleHTML;
+};
+
+window.resetBinanceP2P = function() {
+    ['bp_precioVenta', 'bp_arsRecibidos', 'bp_precioCompra', 'bp_arsRecompra'].forEach(function(id) {
+        localStorage.removeItem(id);
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    window.calcularBinanceP2P();
+};
 
 // --- PESTAÑA FIWIND (fiwind.html) ---
 window.calcularFiwind = function() {
