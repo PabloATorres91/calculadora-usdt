@@ -41,6 +41,36 @@ async function cargarPagina(rutaHtml) {
                 agregarSyncCompra('precioCompra');
                 agregarSyncCampoPar('arsRecibidos', SYNC_ARS_SPREAD_IDS);
                 agregarSyncCampoPar('arsRecompra', SYNC_ARS_SPREAD_IDS);
+                const gananciaObjEl = document.getElementById('gananciaObjetivo');
+                if (gananciaObjEl) {
+                    const guardado = localStorage.getItem('gananciaObjetivo');
+                    if (guardado !== null) gananciaObjEl.value = guardado;
+                    gananciaObjEl.addEventListener('input', function() {
+                        guardarInput('gananciaObjetivo');
+                        window.recalcularPrecioCompraObjetivo();
+                    });
+                    gananciaObjEl.addEventListener('change', window.recalcularPrecioCompraObjetivo);
+                }
+                const ventaSpreadEl = document.getElementById('precioVenta');
+                if (ventaSpreadEl) ventaSpreadEl.addEventListener('input', function() {
+                    const pctActual = document.getElementById('gananciaObjetivo');
+                    if (pctActual && gananciaObjetivoManual && pctActual.value.trim() !== '') {
+                        window.recalcularPrecioCompraObjetivo();
+                    } else {
+                        window.sincronizarGananciaReal();
+                    }
+                });
+                const compraSpreadEl = document.getElementById('precioCompra');
+                if (compraSpreadEl) compraSpreadEl.addEventListener('input', function() {
+                    gananciaObjetivoManual = false;
+                    window.sincronizarGananciaReal();
+                });
+                const pctOnLoad = document.getElementById('gananciaObjetivo');
+                if (pctOnLoad && pctOnLoad.value.trim() === '' &&
+                    document.getElementById('precioVenta').value !== '' &&
+                    document.getElementById('precioCompra').value !== '') {
+                    window.sincronizarGananciaReal();
+                }
                 setTimeout(window.calcularSpread, 100);
             } else if (rutaHtml.includes('binance_p2p.html') && typeof window.calcularBinanceP2P === 'function') {
                 const inputsBP = ['bp_precioVenta', 'bp_arsRecibidos', 'bp_precioCompra', 'bp_arsRecompra'];
@@ -364,6 +394,38 @@ window.onload = function() {
 // ================================================================
 
 // --- PESTAÑA SPREAD (spread.html) ---
+let gananciaObjetivoManual = false;
+
+// Si el usuario toca el campo %, ese valor pasa a ser el "motor": completa el precio de compra según el precio de venta
+window.recalcularPrecioCompraObjetivo = function() {
+    const pctEl = document.getElementById('gananciaObjetivo');
+    const ventaEl = document.getElementById('precioVenta');
+    const compraEl = document.getElementById('precioCompra');
+    if (!pctEl || !ventaEl || !compraEl) return;
+    gananciaObjetivoManual = pctEl.value.trim() !== '';
+    const pct = parseFloat(pctEl.value);
+    const precioVenta = parseFloat(ventaEl.value);
+    if (!gananciaObjetivoManual || isNaN(pct) || isNaN(precioVenta) || precioVenta <= 0 || pct <= -100) return;
+    const precioCompra = precioVenta / (1 + pct / 100);
+    compraEl.value = precioCompra.toFixed(2);
+    localStorage.setItem('precioCompra', compraEl.value);
+    if (window.computeActual) window.computeActual();
+};
+
+// Si el usuario toca venta o compra (sin % manual), el campo % se completa con la ganancia real calculada
+window.sincronizarGananciaReal = function() {
+    const pctEl = document.getElementById('gananciaObjetivo');
+    const ventaEl = document.getElementById('precioVenta');
+    const compraEl = document.getElementById('precioCompra');
+    if (!pctEl || !ventaEl || !compraEl) return;
+    const precioVenta = parseFloat(ventaEl.value);
+    const precioCompra = parseFloat(compraEl.value);
+    if (isNaN(precioVenta) || isNaN(precioCompra) || precioVenta <= 0 || precioCompra <= 0) return;
+    const pct = (precioVenta / precioCompra - 1) * 100;
+    pctEl.value = pct.toFixed(2);
+    guardarInput('gananciaObjetivo');
+};
+
 window.calcularSpread = function() {
     const precioVentaInput = document.getElementById('precioVenta');
     if(!precioVentaInput) return;
