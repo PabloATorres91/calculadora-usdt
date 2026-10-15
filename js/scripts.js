@@ -3,6 +3,9 @@
 // ================================================================
 async function cargarPagina(rutaHtml) {
     const contenedor = document.getElementById('contenedor-dinamico');
+    const contenedorDolar = document.getElementById('contenedor-dolar');
+    if (contenedorDolar) contenedorDolar.style.display = 'none';
+    if (contenedor) contenedor.style.display = 'block';
     
     // 1. Poner el texto de "Cargando..." mientras se descarga
     contenedor.innerHTML = '<div style="text-align:center; padding:20px; color:#6a7e99;">Cargando calculadora...</div>';
@@ -387,6 +390,7 @@ function toggleComisionP2P() {
 // Cargar la primera pestaña por defecto al abrir la página (Spread)
 window.onload = function() {
     cargarPagina('pages/spread.html');
+    iniciarPollerDolar();
 };
 
 // ================================================================
@@ -1359,4 +1363,428 @@ function restaurarPestana(listaIds) {
 // Función para guardar TODOS los inputs de una pestaña específica (se llama con cada tecla)
 function guardarPestana(listaIds) {
     listaIds.forEach(id => guardarInput(id));
+}
+
+// ================================================================
+// DÓLAR OFICIAL + BLUE + UALÁ (DolarApi.com / ComparaDolar) — consulta cada 10 min + gráfico SVG
+// ================================================================
+let historialDolar = [];
+let historialDolarBlue = [];
+let historialDolarUala = [];
+const DOLAR_MAX_PUNTOS = 288; // 48 hs a una muestra cada 10 min
+const DOLAR_MIN_INTERVALO = 10 * 60 * 1000; // ventana mínima entre muestras y entre consultas manuales
+
+function cargarHistorialDolar() {
+    try {
+        const raw = localStorage.getItem('dolarOficialHistorial');
+        historialDolar = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        historialDolar = [];
+    }
+    if (!Array.isArray(historialDolar)) historialDolar = [];
+}
+
+function cargarHistorialDolarBlue() {
+    try {
+        const raw = localStorage.getItem('dolarBlueHistorial');
+        historialDolarBlue = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        historialDolarBlue = [];
+    }
+    if (!Array.isArray(historialDolarBlue)) historialDolarBlue = [];
+}
+
+function cargarHistorialDolarUala() {
+    try {
+        const raw = localStorage.getItem('dolarUalaHistorial');
+        historialDolarUala = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        historialDolarUala = [];
+    }
+    if (!Array.isArray(historialDolarUala)) historialDolarUala = [];
+}
+
+function guardarHistorialDolar() {
+    try {
+        localStorage.setItem('dolarOficialHistorial', JSON.stringify(historialDolar.slice(-DOLAR_MAX_PUNTOS)));
+    } catch (e) {}
+}
+
+function guardarHistorialDolarBlue() {
+    try {
+        localStorage.setItem('dolarBlueHistorial', JSON.stringify(historialDolarBlue.slice(-DOLAR_MAX_PUNTOS)));
+    } catch (e) {}
+}
+
+function guardarHistorialDolarUala() {
+    try {
+        localStorage.setItem('dolarUalaHistorial', JSON.stringify(historialDolarUala.slice(-DOLAR_MAX_PUNTOS)));
+    } catch (e) {}
+}
+
+// Fusionar históricos (localStorage + archivo del recopilador) sin repetir muestras
+// de la misma franja de 10 min.
+function fusionarHistoriales(base, extra) {
+    const bucket = {};
+    [base, extra].forEach(function(arr) {
+        (arr || []).forEach(function(p) {
+            const clave = Math.floor(p.t / DOLAR_MIN_INTERVALO);
+            if (!(clave in bucket)) bucket[clave] = p;
+        });
+    });
+    let salida = Object.keys(bucket).sort(function(a, b) { return a - b; }).map(function(k) { return bucket[k]; });
+    if (salida.length > DOLAR_MAX_PUNTOS) salida = salida.slice(-DOLAR_MAX_PUNTOS);
+    return salida;
+}
+
+function mergeHistorialDolar(extra) {
+    historialDolar = fusionarHistoriales(historialDolar, extra);
+    guardarHistorialDolar();
+}
+
+function mergeHistorialDolarBlue(extra) {
+    historialDolarBlue = fusionarHistoriales(historialDolarBlue, extra);
+    guardarHistorialDolarBlue();
+}
+
+function mergeHistorialDolarUala(extra) {
+    historialDolarUala = fusionarHistoriales(historialDolarUala, extra);
+    guardarHistorialDolarUala();
+}
+
+// Leer los históricos que acumuló el recopilador (data/dolar_historial.json,
+// data/dolar_blue_historial.json y data/dolar_uala_historial.json). Si no existen
+// (o es file:// y el fetch no alcanza), se mantiene el histórico local.
+async function leerHistorialDesdeArchivo() {
+    const fuentes = [
+        ['data/dolar_historial.json', mergeHistorialDolar],
+        ['data/dolar_blue_historial.json', mergeHistorialDolarBlue],
+        ['data/dolar_uala_historial.json', mergeHistorialDolarUala]
+    ];
+    for (let i = 0; i < fuentes.length; i++) {
+        try {
+            const res = await fetch(fuentes[i][0], { cache: 'no-store' });
+            if (res.ok) {
+                const datos = await res.json();
+                if (Array.isArray(datos) && datos.length > 0) fuentes[i][1](datos);
+            }
+        } catch (e) {}
+    }
+}
+
+function formatearNumero(v) {
+    return v.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+}
+
+function pasoBonitoGrafico(rango, objetivoTicks) {
+    const bruto = rango / objetivoTicks;
+    if (bruto <= 0) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+    const norm = bruto / mag;
+    let paso;
+    if (norm <= 1) paso = 1;
+    else if (norm <= 2) paso = 2;
+    else if (norm <= 2.5) paso = 2.5;
+    else if (norm <= 5) paso = 5;
+    else paso = 10;
+    return paso * mag;
+}
+
+function dibujarGraficoDolar(svgId, series, color) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+    // compatibilidad: un solo array de puntos pasado directamente
+    if (Array.isArray(series) && series.length > 0 && series[0] && typeof series[0].compra !== 'undefined') {
+        series = [{ puntos: series, color: color || '#3b82f6', etiqueta: '' }];
+    }
+    const W = 900, H = 320, padL = 78, padR = 20, padT = 20, padB = 42;
+    const ancho = W - padL - padR;
+    const alto = H - padT - padB;
+
+    const noVacio = (series || []).filter(function(sr) { return sr.puntos.length > 0; });
+    if (noVacio.length === 0) {
+        svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="14" fill="#6a7e99">Sin datos todavía. Consultá una vez para empezar el gráfico.</text>`;
+        return;
+    }
+
+    let min = Infinity, max = -Infinity;
+    let tMin = Infinity, tMax = -Infinity;
+    noVacio.forEach(function(sr) {
+        sr.puntos.forEach(function(p) {
+            if (p.compra < min) min = p.compra;
+            if (p.compra > max) max = p.compra;
+            if (p.t < tMin) tMin = p.t;
+            if (p.t > tMax) tMax = p.t;
+        });
+    });
+    if (min === max) { min -= 1; max += 1; }
+    const rango = max - min;
+    min -= rango * 0.08;
+    max += rango * 0.08;
+
+    // Eje X por hora real (no por índice): cada muestra va donde corresponde en el tiempo
+    const rangoT = tMax - tMin;
+
+    const yPos = function(v) {
+        return padT + alto - ((v - min) / (max - min)) * alto;
+    };
+    const xPos = function(t) {
+        if (rangoT <= 0) return padL + ancho / 2;
+        return padL + ((t - tMin) / rangoT) * ancho;
+    };
+
+    let s = '';
+    const paso = pasoBonitoGrafico(max - min, 5);
+    for (let v = Math.ceil(min / paso) * paso; v <= max; v += paso) {
+        const y = yPos(v);
+        s += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#2a3442" stroke-width="1"/>`;
+        s += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="12" fill="#8899b0">${formatearNumero(v)}</text>`;
+    }
+
+    // Etiquetas horarias: cada 2 hs si hay más de 3 hs de datos; si no, una por muestra
+    const DOS_HORAS = 2 * 60 * 60 * 1000;
+    if (rangoT > 3 * 60 * 60 * 1000) {
+        const inicio = Math.ceil(tMin / DOS_HORAS) * DOS_HORAS;
+        for (let tick = inicio; tick <= tMax; tick += DOS_HORAS) {
+            const x = xPos(tick);
+            const t = new Date(tick);
+            s += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT + alto}" stroke="#2a3442" stroke-width="1"/>`;
+            s += `<text x="${x}" y="${H - 14}" text-anchor="middle" font-size="12" fill="#8899b0">${t.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</text>`;
+        }
+    } else {
+        const todas = noVacio[0].puntos;
+        const pasoEtiquetas = Math.max(1, Math.ceil(todas.length / 6));
+        todas.forEach(function(p, i) {
+            if (i % pasoEtiquetas !== 0 && i !== todas.length - 1) return;
+            const x = xPos(p.t);
+            const t = new Date(p.t);
+            s += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT + alto}" stroke="#2a3442" stroke-width="1" stroke-dasharray="3,4"/>`;
+            s += `<text x="${x}" y="${H - 14}" text-anchor="middle" font-size="12" fill="#8899b0">${t.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</text>`;
+        });
+    }
+
+    noVacio.forEach(function(sr) {
+        const pts = sr.puntos.map(function(p) {
+            return xPos(p.t).toFixed(1) + ',' + yPos(p.compra).toFixed(1);
+        }).join(' ');
+        s += `<polyline points="${pts}" fill="none" stroke="${sr.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+        const last = sr.puntos[sr.puntos.length - 1];
+        const lx = xPos(last.t);
+        const ly = yPos(last.compra);
+        s += `<circle cx="${lx}" cy="${ly}" r="4.5" fill="${sr.color}"/>`;
+        s += `<text x="${lx}" y="${ly - (noVacio.indexOf(sr) === 0 ? 10 : 18)}" text-anchor="middle" font-size="12" font-weight="bold" fill="${sr.color}">${formatearNumero(last.compra)}</text>`;
+    });
+
+    s += `<rect x="${padL}" y="${padT}" width="${ancho}" height="${alto}" fill="none" stroke="#2a3442"/>`;
+    svg.innerHTML = s;
+}
+
+window.consultarDolar = async function() {
+    const btn = document.getElementById('btnActualizarDolar');
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ Consultando…'; }
+    const errEl = document.getElementById('dolarError');
+    if (errEl) errEl.textContent = '';
+    const ahora = Date.now();
+    const ultimoT = Math.max(
+        historialDolar.length ? historialDolar[historialDolar.length - 1].t : 0,
+        historialDolarBlue.length ? historialDolarBlue[historialDolarBlue.length - 1].t : 0,
+        historialDolarUala.length ? historialDolarUala[historialDolarUala.length - 1].t : 0
+    );
+    try {
+        const resultados = await Promise.allSettled([
+            fetch('https://dolarapi.com/v1/dolares/oficial').then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function(d) { return { compra: d.compra }; }),
+            fetch('https://dolarapi.com/v1/dolares/blue').then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function(d) { return { compra: d.compra }; }),
+            fetch('https://api.comparadolar.ar/usd').then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function(d) {
+                const uala = (d || []).filter(function(x) { return x.slug === 'uala'; })[0];
+                if (!uala || typeof uala.ask !== 'number') throw new Error('sin cotización de Ualá');
+                return { compra: uala.ask };
+            })
+        ]);
+        const unNuevo = !ultimoT || ahora - ultimoT >= 60 * 1000;
+        for (let i = 0; i < 3; i++) {
+            if (resultados[i].status !== 'fulfilled') continue;
+            const serie = (i === 1) ? 'blue' : (i === 2) ? 'uala' : 'oficial';
+            const dst = { oficial: 'historialDolar', blue: 'historialDolarBlue', uala: 'historialDolarUala' }[serie];
+            if (!unNuevo) break;
+            window[dst].push({ t: ahora, compra: resultados[i].value.compra });
+        }
+        guardarHistorialDolar();
+        guardarHistorialDolarBlue();
+        guardarHistorialDolarUala();
+        const hora = new Date(ahora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const ultActEl = document.getElementById('dolarUltAct');
+        if (ultActEl) ultActEl.textContent = hora;
+        const ultActBlueEl = document.getElementById('blueUltAct');
+        if (ultActBlueEl) ultActBlueEl.textContent = hora;
+        actualizarVistaDolar();
+    } catch (err) {
+        if (errEl) errEl.textContent = 'No se pudo consultar DolarApi/ComparaDolar. Se reintentará en 10 min. (' + err.message + ')';
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⟳ Actualizar ahora'; }
+    }
+};
+
+// Series a dibujar en cada panel: el oficial lleva también la línea de Ualá.
+function construirSeriesGrafico(prefijo) {
+    if (prefijo === 'dolar') {
+        return [
+            { puntos: historialDolar, color: '#3b82f6', etiqueta: 'Oficial BCRA' },
+            { puntos: historialDolarUala, color: '#f59e0b', etiqueta: 'Ualá' }
+        ];
+    }
+    return [{ puntos: historialDolarBlue, color: '#38bdf8', etiqueta: 'Blue' }];
+}
+
+// Renderizar un panel (oficial o blue). prefijo: 'dolar' o 'blue'; ids: prefijoCompra,
+// prefijoUltimoPrecio, prefijoVariacion, prefijoUltAct, prefijoGrafico.
+function aplicarPanelVista(prefijo, historial, color) {
+    const compraEl = document.getElementById(prefijo + 'Compra');
+    if (!compraEl) return;
+    const ultActEl = document.getElementById(prefijo + 'UltAct');
+    const ultimoPrecioEl = document.getElementById(prefijo + 'UltimoPrecio');
+    const varEl = document.getElementById(prefijo + 'Variacion');
+    if (historial.length === 0) {
+        compraEl.textContent = '—';
+        if (ultimoPrecioEl) { ultimoPrecioEl.textContent = '—'; ultimoPrecioEl.style.color = ''; }
+        if (varEl) varEl.textContent = '—';
+        if (ultActEl) ultActEl.textContent = '—';
+        dibujarGraficoDolar(prefijo + 'Grafico', construirSeriesGrafico(prefijo));
+        return;
+    }
+    const last = historial[historial.length - 1];
+    compraEl.textContent = '$' + formatearNumero(last.compra);
+    if (ultActEl) ultActEl.textContent = new Date(last.t).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    // Último precio distinto al actual: verde si era más (el dólar bajó), rojo si era menos (el dólar subió)
+    let prevDistinto = null;
+    for (let i = historial.length - 2; i >= 0; i--) {
+        if (historial[i].compra !== last.compra) { prevDistinto = historial[i]; break; }
+    }
+    if (ultimoPrecioEl) {
+        if (prevDistinto) {
+            const eraMas = prevDistinto.compra > last.compra;
+            ultimoPrecioEl.textContent = '$' + formatearNumero(prevDistinto.compra);
+            ultimoPrecioEl.style.color = eraMas ? '#22c55e' : '#ef4444';
+        } else {
+            ultimoPrecioEl.textContent = '—';
+            ultimoPrecioEl.style.color = '';
+        }
+    }
+    const prev = historial[historial.length - 2];
+    if (varEl) {
+        if (prev) {
+            const diff = last.compra - prev.compra;
+            varEl.textContent = (diff >= 0 ? '+' : '') + formatearNumero(diff);
+            varEl.style.color = diff >= 0 ? '#22c55e' : '#ef4444';
+        } else {
+            varEl.textContent = '—';
+        }
+    }
+    dibujarGraficoDolar(prefijo + 'Grafico', construirSeriesGrafico(prefijo));
+}
+
+// Strip "Dólar Ualá" dentro del panel DOLAR OFICIAL
+function actualizarVistaUala() {
+    const ualaEl = document.getElementById('dolarUala');
+    const varEl = document.getElementById('dolarUalaVar');
+    if (!ualaEl) return;
+    const hist = historialDolarUala;
+    if (hist.length === 0) {
+        ualaEl.textContent = '—';
+        ualaEl.style.color = '';
+        if (varEl) { varEl.textContent = '—'; varEl.style.color = ''; }
+        return;
+    }
+    const last = hist[hist.length - 1];
+    ualaEl.textContent = '$' + formatearNumero(last.compra);
+    let prevDistinto = null;
+    for (let i = hist.length - 2; i >= 0; i--) {
+        if (hist[i].compra !== last.compra) { prevDistinto = hist[i]; break; }
+    }
+    if (prevDistinto) {
+        const eraMas = prevDistinto.compra > last.compra;
+        ualaEl.style.color = eraMas ? '#22c55e' : '#ef4444';
+        if (varEl) {
+            const diff = last.compra - prevDistinto.compra;
+            const pct = (diff / prevDistinto.compra) * 100;
+            varEl.textContent = (diff >= 0 ? '+' : '') + formatearNumero(diff) + ' (' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%)';
+            varEl.style.color = eraMas ? '#22c55e' : '#ef4444';
+        }
+    } else {
+        ualaEl.style.color = '';
+        if (varEl) { varEl.textContent = '—'; varEl.style.color = ''; }
+    }
+}
+
+function actualizarVistaDolar() {
+    aplicarPanelVista('dolar', historialDolar, '#3b82f6');
+    aplicarPanelVista('blue', historialDolarBlue, '#38bdf8');
+    actualizarVistaUala();
+}
+
+function mostrarAvisoDolar(mensaje) {
+    let overlay = document.getElementById('dolarModal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'dolarModal';
+        overlay.style.cssText = 'position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center;';
+        const caja = document.createElement('div');
+        caja.style.cssText = 'background: #10171f; border: 1px solid #3b82f6; border-radius: 12px; padding: 22px 26px; max-width: 420px; font-size: 14px; line-height: 1.6; color: #e8edf5; box-shadow: 0 10px 40px rgba(0,0,0,.6); text-align: left;';
+        const msgDiv = document.createElement('div');
+        msgDiv.id = 'dolarModalMsg';
+        msgDiv.style.cssText = 'white-space: pre-line;';
+        const btn = document.createElement('button');
+        btn.textContent = 'Aceptar';
+        btn.style.cssText = 'margin-top: 18px; background: #3b82f6; color: #fff; border: none; padding: 9px 28px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600;';
+        btn.addEventListener('click', function() { overlay.style.display = 'none'; });
+        caja.appendChild(msgDiv);
+        caja.appendChild(btn);
+        overlay.appendChild(caja);
+        document.body.appendChild(overlay);
+    }
+    document.getElementById('dolarModalMsg').textContent = mensaje;
+    overlay.style.display = 'flex';
+}
+
+// Botón "Actualizar ahora": si hace poco que se consultó, avisa en vez de sumar muestra
+window.consultarDolarManual = function() {
+    const ahora = Date.now();
+    const ultimo = historialDolar[historialDolar.length - 1];
+    const ultimoBlue = historialDolarBlue[historialDolarBlue.length - 1];
+    const ultimoUala = historialDolarUala[historialDolarUala.length - 1];
+    const ultimoT = Math.max(ultimo ? ultimo.t : 0, ultimoBlue ? ultimoBlue.t : 0, ultimoUala ? ultimoUala.t : 0);
+    if (ultimoT && ahora - ultimoT < DOLAR_MIN_INTERVALO) {
+        const tUlt = new Date(ultimoT);
+        const prox = new Date(ultimoT + DOLAR_MIN_INTERVALO);
+        const faltan = Math.ceil((ultimoT + DOLAR_MIN_INTERVALO - ahora) / 60000);
+        let mensaje = 'La última consulta se ejecutó a las ' + tUlt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (ultimo) mensaje += '\nPrecio oficial: $' + formatearNumero(ultimo.compra);
+        if (ultimoUala) mensaje += '\nPrecio Ualá: $' + formatearNumero(ultimoUala.compra);
+        if (ultimoBlue) mensaje += '\nPrecio blue: $' + formatearNumero(ultimoBlue.compra);
+        mensaje += '\nLa próxima consulta automática será en ~' + faltan + ' min (a las ' + prox.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) + ').';
+        mostrarAvisoDolar(mensaje);
+        return;
+    }
+    window.consultarDolar();
+};
+
+// Mostrar la vista del dólar (vive en index.html, no se fetchea) y consultar al toque
+window.cargarDolar = async function() {
+    const contenedorDolar = document.getElementById('contenedor-dolar');
+    const contenedor = document.getElementById('contenedor-dinamico');
+    if (contenedorDolar) contenedorDolar.style.display = 'block';
+    if (contenedor) contenedor.style.display = 'none';
+    cargarHistorialDolar();
+    cargarHistorialDolarBlue();
+    cargarHistorialDolarUala();
+    await leerHistorialDesdeArchivo();
+    actualizarVistaDolar();
+    window.consultarDolar();
+};
+
+function iniciarPollerDolar() {
+    cargarHistorialDolar();
+    cargarHistorialDolarBlue();
+    cargarHistorialDolarUala();
+    setInterval(function() { window.consultarDolar(); }, 10 * 60 * 1000);
 }

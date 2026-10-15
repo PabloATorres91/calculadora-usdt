@@ -39,6 +39,7 @@
         <button class="tab" onclick="cargarPagina('pages/binance_spot.html')">📈 Compra en Binance Spot</button>
         <button class="tab" onclick="cargarPagina('pages/spot_retiro.html')">🔄 Venta Spot → Recompra P2P</button>
         <button class="tab" id="btnKraken" onclick="cargarPagina('pages/kraken.html')">🔁 Ciclo USD/Fiwind/Kraken</button>
+        <button class="tab" onclick="cargarDolar()">📈 Dólar oficial</button>
     </div>
 
     <!-- 👇 BOTÓN OPCIONAL PARA LIMPIAR DATOS 👇 -->
@@ -51,6 +52,89 @@
     <!-- EL ESPACIO DONDE SE CARGARÁ EL CONTENIDO -->
     <div id="contenedor-dinamico">
         <!-- Aquí se cargará el código HTML de las páginas -->
+    </div>
+
+    <!-- VISTA DÓLAR OFICIAL + BLUE (directo, sin cargar página) -->
+    <div id="contenedor-dolar" style="display: none;">
+        <div class="result-section">
+            <h2>📈 Dólar oficial y blue <span>consulta cada 10 min · DolarApi.com</span></h2>
+
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+
+                <!-- DOLAR OFICIAL -->
+                <div style="flex: 1 1 420px; min-width: 340px; background: #0d141b; border: 1px solid #232d3a; border-radius: 12px; padding: 14px;">
+                    <div style="font-size: 15px; font-weight: 800; letter-spacing: 1px; color: #e8edf5; margin-bottom: 10px;">DOLAR OFICIAL</div>
+                    <div class="result-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <div class="result-item">
+                            <div class="label">Compra <small>(te venden el dólar)</small></div>
+                            <div class="value" id="dolarCompra">—</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Último precio <small>anterior distinto</small></div>
+                            <div class="value" id="dolarUltimoPrecio">—</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Variación <small>respecto a la anterior</small></div>
+                            <div class="value" id="dolarVariacion">—</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Última consulta <small>hora local</small></div>
+                            <div class="value" id="dolarUltAct">—</div>
+                        </div>
+                    </div>
+
+                    <!-- DÓLAR UALÁ (oficial con el spread de Ualá) -->
+                    <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; background: #10171f; border: 1px solid #232d3a; border-radius: 10px; padding: 10px 14px;">
+                        <div class="label" style="margin: 0;">Ualá <small>(te venden el dólar)</small></div>
+                        <div style="display: flex; gap: 18px; align-items: center;">
+                            <div class="value" id="dolarUala" style="font-size: 21px;">—</div>
+                            <div class="value" id="dolarUalaVar" style="font-size: 13px;">—</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 12px; background: #10171f; border-radius: 12px; padding: 10px; overflow-x: auto;">
+                        <svg id="dolarGrafico" viewBox="0 0 900 320" style="width: 100%; height: auto; display: block;"></svg>
+                    </div>
+                    <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: #8899b0;">
+                        <span><span style="color: #3b82f6;">●</span> Oficial BCRA</span>
+                        <span><span style="color: #f59e0b;">●</span> Ualá</span>
+                    </div>
+                </div>
+
+                <!-- DOLAR BLUE -->
+                <div style="flex: 1 1 420px; min-width: 340px; background: #0d141b; border: 1px solid #232d3a; border-radius: 12px; padding: 14px;">
+                    <div style="font-size: 15px; font-weight: 800; letter-spacing: 1px; color: #e8edf5; margin-bottom: 10px;">DOLAR BLUE</div>
+                    <div class="result-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <div class="result-item">
+                            <div class="label">Compra <small>(te venden el dólar)</small></div>
+                            <div class="value" id="blueCompra">—</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Último precio <small>anterior distinto</small></div>
+                            <div class="value" id="blueUltimoPrecio">—</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Variación <small>respecto a la anterior</small></div>
+                            <div class="value" id="blueVariacion">—</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Última consulta <small>hora local</small></div>
+                            <div class="value" id="blueUltAct">—</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px; background: #10171f; border-radius: 12px; padding: 10px; overflow-x: auto;">
+                        <svg id="blueGrafico" viewBox="0 0 900 320" style="width: 100%; height: auto; display: block;"></svg>
+                    </div>
+                </div>
+
+            </div>
+
+            <div style="margin-top: 14px; display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn" id="btnActualizarDolar" onclick="window.consultarDolarManual()">⟳ Actualizar ahora</button>
+            </div>
+            <div id="dolarError" style="margin-top: 10px; font-size: 13px; color: #ef4444;"></div>
+            <div class="hint" id="dolarHint">Se guardan las últimas 48 hs: una muestra cada 10 min mientras la página esté abierta. Con la PC prendida, el recopilador (tarea <b>RecopiladorDolar</b>) sigue guardando el histórico de los tres en <code>data\dolar_historial.json</code>, <code>data\dolar_blue_historial.json</code> y <code>data\dolar_uala_historial.json</code> aunque la pestaña esté cerrada; al abrir la solapa se carga todo.</div>
+        </div>
     </div>
 
     <div class="footer-note">
